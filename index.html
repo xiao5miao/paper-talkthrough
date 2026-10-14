@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PaperTalkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E9EDE8; --page:#F8F9F6; --ink:#1E2830; --muted:#5A676E; --line:#D2D9D2;
+  --now:#F5D67E; --now-ink:#1E2830; --mark:#DCD0F3; --accent:#2B6A65; --accent-ink:#FFFFFF;
+  --panel:#F2F4F0; --you:#DDE7E5; --live:#C2413A;
+  --h1:#DCD0F3; --h2:#CDE8C9; --h3:#C9DDF2; --h4:#F4CCD8;
+  --ui:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --read:"Literata", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#141A1E; --page:#1A2126; --ink:#E3E8E3; --muted:#9AA6AA; --line:#2C373D;
+    --now:#6E5C1C; --now-ink:#FFF5D6; --mark:#43395F; --accent:#72BCB3; --accent-ink:#0E1A19;
+    --panel:#182025; --you:#22322F;
+    --h1:#43395F; --h2:#2F4A31; --h3:#26405A; --h4:#5A2E3B;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.5 var(--ui);overflow:hidden}
+button,select,textarea,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{height:100%;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;border-bottom:1px solid var(--line)}
+header h1{font:600 1.05rem/1.3 var(--read);margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#where{color:var(--muted);font-size:.9rem;white-space:nowrap}
+.btn{border:1px solid var(--line);background:var(--page);border-radius:999px;padding:.4rem .85rem}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.main{flex:1;min-height:0;display:flex}
+#reader{flex:1;min-width:0;overflow:auto;padding:2rem 1.25rem 4rem;background:var(--page)}
+.text{max-width:38rem;margin:0 auto;font:400 1.2rem/1.8 var(--read)}
+.text p{margin:0 0 1.1em}
+.text p.aside{font:400 .8em/1.6 var(--ui);color:var(--muted);border-left:3px solid var(--line);padding-left:.7em}
+.text p.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.75em}
+.pg{font:700 .8rem/1 var(--ui);color:var(--muted);margin:2.2rem 0 1rem;display:flex;align-items:center;gap:.6rem}
+.pg::after{content:"";flex:1;border-top:1px solid var(--line)}
+.s{border-radius:3px;cursor:pointer;transition:background-color .25s}
+.s:hover{background:color-mix(in srgb,var(--now) 30%,transparent)}
+mark.hl{color:inherit;border-radius:2px;cursor:pointer;padding:.08em 0}
+mark.hl.c1{background:var(--h1)} mark.hl.c2{background:var(--h2)} mark.hl.c3{background:var(--h3)} mark.hl.c4{background:var(--h4)}
+mark.hl.noted{box-shadow:inset 0 -2px 0 var(--accent)}
+mark.hl.flash{outline:2px solid var(--accent);outline-offset:1px}
+.doc{display:flex;justify-content:center;gap:2rem;align-items:flex-start}
+.doc .text{flex:0 1 38rem;min-width:0;margin:0}
+#margin{flex:0 0 14rem;position:relative;align-self:stretch}
+.mnote{position:absolute;left:0;right:0;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:8px;padding:.45rem .6rem;font-size:.9rem;line-height:1.4;cursor:pointer;white-space:pre-wrap;transition:top .15s}
+.mnote:hover{border-color:var(--accent);border-left-color:var(--c)}
+.mnote textarea,.note textarea{width:100%;min-height:4.5rem;border:1px solid var(--line);border-radius:8px;padding:.4rem;background:var(--page);font:inherit;resize:vertical}
+.mnote .row,.note .row{display:flex;gap:.7rem;margin-top:.35rem;flex-wrap:wrap}
+.mnote .row button,.note .row button{background:none;border:0;padding:0;color:var(--accent);font-size:.85rem}
+#pages{flex:0 1 54rem;min-width:0;display:flex;flex-direction:column;gap:1.2rem;user-select:none;-webkit-user-select:none}
+.pgwrap{position:relative;width:100%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18);cursor:text}
+.pgwrap img{display:block;width:100%;height:100%;pointer-events:none}
+.ov{position:absolute;inset:0;pointer-events:none}
+.box{position:absolute;border-radius:2px}
+.box.now{background:rgba(245,196,60,.35);box-shadow:0 0 0 2px rgba(214,160,20,.75)}
+.box.hlb{mix-blend-mode:multiply}
+.box.hlb.c1{background:#CDB8F5} .box.hlb.c2{background:#B3E2AB} .box.hlb.c3{background:#AECCF3} .box.hlb.c4{background:#F5B3C7}
+.box.hlb.noted{box-shadow:inset 0 -2px 0 var(--accent)}
+.box.hlb.flash{outline:2px solid var(--accent);outline-offset:1px}
+.box.selb{background:rgba(43,106,101,.22)}
+@media (max-width:1180px){ #margin{display:none} mark.hl.noted::after{content:"✎";font-size:.7em;margin-left:.15em;color:var(--accent)} }
+.s.now{background:var(--now);color:var(--now-ink);box-shadow:0 0 0 3px var(--now)}
+.s.sel{outline:2px solid var(--accent);outline-offset:3px}
+#tools{position:fixed;z-index:20;display:none;gap:.25rem;background:var(--ink);color:var(--page);padding:.3rem;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+#tools.on{display:flex}
+#tools{align-items:center}
+#tools button{background:none;border:0;color:inherit;padding:.45rem .7rem;border-radius:8px;font-size:.92rem}
+#tools .sw{width:1.7rem;height:1.7rem;padding:0;border-radius:50%;border:2px solid transparent;margin:0 .1rem}
+#tools .sw.on{border-color:var(--page)}
+#tools .sep{width:1px;align-self:stretch;background:rgba(255,255,255,.25);margin:.2rem .2rem}
+#tools button:hover{background:rgba(255,255,255,.15)}
+.empty{max-width:34rem;margin:7vh auto 0}
+.empty h2{font:600 2rem/1.2 var(--read);margin:0 0 .6rem}
+.empty p{color:var(--muted);margin:0 0 1.4rem;font-size:1.05rem}
+.drop{border:2px dashed var(--line);border-radius:16px;padding:1.6rem;display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+.drop.over{border-color:var(--accent)}
+#status{color:var(--muted);margin-top:1rem;min-height:1.5em}
+.warn{background:color-mix(in srgb,var(--live) 12%,transparent);border-radius:12px;padding:.7rem .9rem;margin-top:1rem}
+.recent{margin-top:1.8rem}
+.recent h3{font-size:.95rem;margin:0 0 .5rem;color:var(--muted)}
+.recent .item{display:flex;align-items:center;gap:1rem;border-top:1px solid var(--line)}
+.recent .open{flex:1;display:flex;justify-content:space-between;gap:1rem;text-align:left;background:none;border:0;padding:.65rem 0;font-family:var(--read);min-width:0}
+.recent .open span:last-child{font-family:var(--ui);color:var(--muted);font-size:.9rem;white-space:nowrap}
+.recent .del{background:none;border:0;color:var(--muted);font-size:.85rem;padding:.3rem .5rem;border-radius:8px}
+.recent .del:hover{color:var(--live);background:color-mix(in srgb,var(--live) 10%,transparent)}
+.home aside,.home .player{display:none}
+aside{width:25rem;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:.7rem;border-bottom:3px solid transparent;color:var(--muted);font-weight:700}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.pane{flex:1;min-height:0;overflow:auto;padding:1rem}
+.pane[hidden]{display:none}
+.msg{margin:0 0 .9rem;padding:.65rem .8rem;border-radius:12px;max-width:92%;white-space:pre-wrap;line-height:1.5}
+.msg.user{background:var(--you);margin-left:auto}
+.msg.assistant{background:var(--page);border:1px solid var(--line)}
+.msg.focus{background:color-mix(in srgb,var(--accent) 9%,var(--page));border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);border-left:4px solid var(--accent);max-width:100%;cursor:pointer}
+.msg.focus .lbl{display:block;font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:.2rem}
+.msg.focus .body{font:italic .95rem/1.5 var(--read)}
+.msg .status{font-size:.8rem;color:var(--muted);margin-bottom:.3rem}
+.msg.sys{background:none;color:var(--muted);font-size:.88rem;padding:0 .2rem;max-width:100%;text-align:center}
+.msg .anchor{display:block;background:none;border:0;padding:0;margin:0 0 .3rem;font-size:.8rem;color:var(--muted);text-align:left;font-style:italic}
+.hint{color:var(--muted);font-size:.95rem}
+.convhead{display:flex;align-items:center;gap:.6rem;padding:.5rem 1rem;border-bottom:1px solid var(--line);font-size:.85rem;color:var(--muted)}
+.convhead span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.convhead button{background:none;border:0;color:var(--accent);font-size:.85rem;padding:0;white-space:nowrap}
+#live{min-height:1.5em;color:var(--muted);font-style:italic;padding:0 .2rem .4rem}
+.compose{border-top:1px solid var(--line);padding:.6rem;display:flex;gap:.4rem;align-items:flex-end}
+.compose textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:12px;padding:.5rem .7rem;background:var(--page);max-height:8rem}
+.icon{width:2.5rem;height:2.5rem;border-radius:50%;border:1px solid var(--line);background:var(--page);display:grid;place-items:center;flex:0 0 auto;padding:0}
+.icon svg{width:1.2rem;height:1.2rem}
+.note{border-top:1px solid var(--line);padding:.7rem 0}
+.note q{display:block;font:italic .92rem/1.45 var(--read);color:var(--muted);cursor:pointer;quotes:none}
+.note .body{margin:.35rem 0 0;white-space:pre-wrap}
+.note{border-left:4px solid var(--c);padding-left:.6rem}
+.player{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.8rem 2rem;padding:.65rem 1.6rem;border-top:1px solid var(--line)}
+.grp{display:flex;align-items:center;gap:.6rem}
+.play{width:3.2rem;height:3.2rem;border-radius:50%;border:0;background:var(--ink);color:var(--page);display:grid;place-items:center}
+.play svg{width:1.4rem;height:1.4rem}
+.opts{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1.2rem;min-width:0}
+.opts .line{display:contents}
+.opts label{font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.45rem;white-space:nowrap}
+.opts select{border:1px solid var(--line);border-radius:8px;background:var(--page);padding:.3rem .45rem}
+.opts input[type=checkbox]{accent-color:var(--accent);margin:0}
+/* Skip: quiet toggles that read like words; pick any number of them, or none */
+.skip{display:flex;flex-wrap:wrap;align-items:center;gap:.3rem .2rem;font-size:.85rem;border-left:1px solid var(--line);padding-left:1.1rem}
+.skip .lbl{color:var(--muted);margin-right:.25rem}
+.chip{background:none;border:0;border-radius:999px;padding:.2rem .55rem;color:var(--muted);transition:background-color .15s,color .15s}
+.chip::before{content:"✓";display:inline-block;width:0;overflow:hidden;opacity:0;font:700 .8em/1 system-ui,sans-serif;vertical-align:.05em;transition:width .15s,opacity .15s}
+.chip:hover{color:var(--ink);background:color-mix(in srgb,var(--line) 45%,transparent)}
+.chip[aria-pressed="true"]{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.chip[aria-pressed="true"]::before{width:1.05em;opacity:1}
+.call{display:flex;align-items:center;justify-content:flex-end;gap:1rem}
+.call .barge{font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:.45rem;white-space:nowrap}
+.call .barge input{accent-color:var(--accent);margin:0}
+#callState{font-weight:700;display:flex;align-items:center;gap:.45rem;color:var(--muted)}
+#callState .dot{width:.7rem;height:.7rem;border-radius:50%;background:currentColor}
+#callState.listening{color:var(--live)} #callState.listening .dot{animation:pulse 1.2s infinite}
+#callState.thinking{color:var(--muted)} #callState.thinking .dot{animation:blink 1s infinite}
+#callState.speaking{color:var(--accent)}
+@keyframes pulse{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--live) 25%,transparent)}}
+@keyframes blink{50%{opacity:.25}}
+.talk{border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);padding:.85rem 1.5rem;font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:.55rem}
+.talk svg{width:1.2rem;height:1.2rem}
+.talk.end{background:var(--live);color:#fff}
+.keys{font-size:.8rem;color:var(--muted)}
+@media (max-width:900px){ aside{width:20rem} .keys{display:none} }
+@media (max-width:820px){ .player{grid-template-columns:auto 1fr} .call{grid-column:1 / -1} }
+@media (max-width:1750px){ .keys{display:none} }
+@media (max-width:1500px){ .player{gap:.8rem 1.3rem} .opts{gap:.5rem .9rem} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.hidden{display:none!important}
+</style>
+</head>
+<body class="home">
+<div class="app">
+  <header>
+    <h1 id="title">PaperTalkthrough</h1>
+    <span id="where"></span>
+    <button class="btn hidden" id="viewBtn">Page view</button>
+    <button class="btn hidden" id="exportBtn">Export PDF</button>
+    <button class="btn hidden" id="home">Library</button>
+  </header>
+  <div class="main">
+    <div id="reader">
+      <div class="empty" id="empty">
+        <h2>Listen to a paper. Call in whenever you have a question.</h2>
+        <p>Open a PDF and it's read aloud sentence by sentence. Press <b>Call</b> to talk it over, and when you hang up, reading picks up exactly where it stopped.</p>
+        <div class="drop" id="drop">
+          <button class="btn primary" id="pick">Open a PDF</button>
+          <span class="hint">or drop one here</span>
+        </div>
+        <div id="status"></div>
+        <div id="warnings"></div>
+        <div class="recent hidden" id="recent"><h3>Your library</h3><div id="recentList"></div></div>
+      </div>
+      <div class="doc"><div class="text" id="text"></div><div id="pages" class="hidden"></div><div id="margin" aria-label="Notes in the margin"></div></div>
+    </div>
+    <aside>
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="call">Call</button>
+        <button role="tab" aria-selected="false" data-tab="notes">Notes</button>
+      </div>
+      <div class="convhead"><span id="convTitle"></span><button id="clearChat">Clear conversation</button></div>
+      <div class="pane" id="callPane"><div id="msgs"></div><div id="live"></div></div>
+      <div class="pane" id="notesPane" hidden><div id="noteList"></div></div>
+      <div class="compose" id="compose">
+        <textarea id="input" rows="1" placeholder="Or type a question…"></textarea>
+        <button class="icon" id="send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+      </div>
+    </aside>
+  </div>
+  <div class="player">
+    <div class="grp">
+      <button class="icon" id="prev" aria-label="Previous sentence"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 9 12l9 6zM6 6v12"/></svg></button>
+      <button class="play" id="play" aria-label="Play"><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg></button>
+      <button class="icon" id="next" aria-label="Next sentence"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 9 6-9 6zM18 6v12"/></svg></button>
+    </div>
+    <div class="opts">
+      <div class="line">
+        <label>Voice <select id="voice"></select></label>
+        <label>Speed <select id="speed"><option>0.8</option><option>0.9</option><option selected>1</option><option>1.1</option><option>1.2</option><option>1.35</option><option>1.5</option></select></label>
+        <label>I speak <select id="lang"><option value="en-US">English</option><option value="zh-CN">中文</option></select></label>
+      </div>
+      <div class="skip" role="group" aria-label="Skip when reading aloud">
+        <span class="lbl">Skip</span>
+        <button class="chip" data-skip="cites" title="(Smith et al., 2019), [12]">Citations</button>
+        <button class="chip" data-skip="caption" title="Figure and table captions">Captions</button>
+        <button class="chip" data-skip="table">Tables</button>
+        <button class="chip" data-skip="code">Code</button>
+        <button class="chip" data-skip="small" title="Footnotes, labels and other small text">Small print</button>
+      </div>
+    </div>
+    <div class="call">
+      <span id="callState" class="hidden"><span class="dot"></span><span id="callText"></span></span>
+      <span class="keys" id="keys">Space play/pause</span>
+      <label class="barge" title="Talk over the AI to interrupt it. Works best with headphones."><input type="checkbox" id="barge" checked> Interrupt by talking</label>
+      <button class="talk" id="talk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><span id="talkLabel">Call</span></button>
+    </div>
+  </div>
+</div>
+<div id="tools" role="toolbar"></div>
+<input type="file" id="file" accept="application/pdf,.pdf" hidden>
+
+<script>
+// Phones get the simplified page (add ?desktop=1 to the address to stay on the full version)
+if (matchMedia('(max-width: 700px)').matches && !location.search.includes('desktop')) location.replace('/m');
+const $ = s => document.querySelector(s);
+const pref = { get:(k,d)=>{ try{ return localStorage.getItem('ra.'+k) ?? d; }catch(e){ return d; } }, set:(k,v)=>{ try{ localStorage.setItem('ra.'+k, v); }catch(e){} } };
+const S = { id:null, title:'', sents:[], pos:0, hls:[], chat:[], mode:'idle', anchor:null, sel:null, geo:null, view:'text' };
+// geo = where every word sits on the original PDF pages: words[k] = [sentence, charStart, charEnd, page, x0, y0, x1, y1]
+let G = null;  // lookup tables built from S.geo
+// hls = highlights: {id, s1, o1, s2, o2, c (color 1-4), note, text}  (s = sentence index, o = character offset)
+// mode: idle | reading | listening | thinking | speaking
+let token = 0, aiAbort = null, saveTimer = null, lastUserScroll = 0, micDenied = false, config = {};
+const player = new Audio();
+
+/* ---------------- server ---------------- */
+async function api(path, opts){ const r = await fetch(path, opts); if (!r.ok){ let m = r.statusText; try{ m = (await r.json()).detail || m; }catch(e){} throw new Error(m); } return r; }
+function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 600); }
+function saveNow(){
+  if (!S.id) return Promise.resolve();
+  const body = JSON.stringify({pos:S.pos, hls:S.hls, chat:S.chat});
+  return fetch('/api/state/' + S.id, {method:'POST', headers:{'Content-Type':'application/json'}, body, keepalive: body.length < 60000}).catch(()=>{});
+}
+
+async function init(){
+  try{ config = await (await api('/api/config')).json(); }catch(e){ config = {}; }
+  const sel = $('#voice'), want = pref.get('voice', config.voice || 'af_heart');
+  sel.innerHTML = (config.voices || []).map(v => `<option ${v===want?'selected':''}>${v}</option>`).join('');
+  $('#speed').value = pref.get('speed', '1'); $('#lang').value = pref.get('lang', 'en-US'); $('#barge').checked = pref.get('barge', '1') === '1';
+  const w = [];
+  if (!config.tts_ok) w.push('The voice model isn’t installed. In the project folder run <b>python download_models.py</b>, then restart the server.');
+  if (!config.ai_ok) w.push('No API key found. Put your key in the <b>.env</b> file (see README), then restart the server. Reading still works without it.');
+  if (!SR) w.push('This browser can’t listen to your voice. Use Chrome or Edge for calls. You can still type questions.');
+  $('#warnings').innerHTML = w.map(x => `<div class="warn">${x}</div>`).join('');
+  showLibrary();
+}
+async function showLibrary(){
+  document.body.classList.add('home');
+  stopEverything(); S.id = null; S.geo = null; S.view = 'text';
+  S.sents = []; S.hls = []; S.chat = []; editingId = null;
+  $('#msgs').innerHTML = ''; $('#noteList').innerHTML = ''; $('#live').textContent = ''; $('#convTitle').textContent = '';
+  $('#pages').innerHTML = ''; $('#pages').classList.add('hidden'); $('#text').classList.remove('hidden'); $('#margin').innerHTML = '';
+  $('#viewBtn').classList.add('hidden'); $('#exportBtn').classList.add('hidden');
+  $('#empty').classList.remove('hidden'); $('#text').innerHTML = ''; $('#home').classList.add('hidden');
+  $('#title').textContent = 'PaperTalkthrough'; $('#where').textContent = '';
+  try{
+    const items = await (await api('/api/library')).json();
+    $('#recent').classList.toggle('hidden', !items.length);
+    $('#recentList').innerHTML = '';
+    items.forEach(d => {
+      const row = document.createElement('div'); row.className = 'item';
+      const b = document.createElement('button'); b.className = 'open';
+      b.innerHTML = `<span></span><span>${Math.round(d.pos / Math.max(1,d.total) * 100)}% read</span>`;
+      b.firstChild.textContent = d.title; b.onclick = () => openDoc(d.id);
+      const del = document.createElement('button'); del.className = 'del'; del.textContent = 'Remove';
+      del.onclick = async () => {
+        if (!confirm(`Remove "${d.title}" from your library? Its highlights, notes and conversation will be deleted too.`)) return;
+        try{ await api('/api/doc/' + d.id, {method:'DELETE'}); }catch(e){ $('#status').textContent = 'Couldn’t remove it: ' + e.message; }
+        showLibrary();
+      };
+      row.append(b, del); $('#recentList').appendChild(row);
+    });
+  }catch(e){}
+}
+async function upload(file){
+  $('#status').textContent = 'Reading ' + file.name + '… (long papers take a few seconds)';
+  try{
+    const fd = new FormData(); fd.append('file', file);
+    const {id} = await (await api('/api/upload', {method:'POST', body:fd})).json();
+    $('#status').textContent = ''; openDoc(id);
+  }catch(e){
+    $('#status').textContent = e.message === 'Failed to fetch'
+      ? 'Couldn’t reach the server. Check the black window: the server may have stopped with an error.'
+      : e.message;
+  }
+}
+async function openDoc(id){
+  const {doc, state} = await (await api('/api/doc/' + id)).json();
+  const hls = state.hls || [];
+  // older saves stored whole-sentence highlights and notes separately
+  (state.marks || []).forEach(i => { if (doc.sents[i]) hls.push({id:newId(), s1:i, o1:0, s2:i, o2:doc.sents[i].t.length, c:1, note:'', text:doc.sents[i].t.slice(0,300)}); });
+  (state.notes || []).forEach(n => { if (!doc.sents[n.i]) return; const h = hls.find(x => x.s1 === n.i && x.s2 === n.i);
+    if (h) h.note = n.text; else hls.push({id:newId(), s1:n.i, o1:0, s2:n.i, o2:doc.sents[n.i].t.length, c:1, note:n.text, text:doc.sents[n.i].t.slice(0,300)}); });
+  Object.assign(S, {id, title:doc.title, sents:doc.sents, pos:state.pos||0, hls, chat:state.chat||[], anchor:null, sel:null});
+  $('#empty').classList.add('hidden'); $('#home').classList.remove('hidden'); document.body.classList.remove('home');
+  $('#title').textContent = S.title;
+  $('#convTitle').textContent = 'Conversation about “' + S.title + '”';
+  S.geo = null; G = null; S.view = 'text';
+  $('#pages').innerHTML = ''; $('#pages').classList.add('hidden'); $('#text').classList.remove('hidden');
+  render();
+  $('#viewBtn').classList.remove('hidden'); $('#exportBtn').classList.remove('hidden'); $('#viewBtn').textContent = 'Page view';
+  try{
+    S.geo = await (await api('/api/geo/' + id)).json();
+    G = {bySent: [], byPage: {}};
+    S.geo.words.forEach((w, k) => {
+      const r = G.bySent[w[0]]; if (r) r[1] = k + 1; else G.bySent[w[0]] = [k, k + 1];
+      (G.byPage[w[3]] ||= []).push(k);
+    });
+    if (pref.get('view', 'text') === 'page') setView('page');
+  }catch(e){ S.geo = null; }
+}
+
+/* ---------------- rendering ---------------- */
+function render(){
+  const box = $('#text'); box.innerHTML = '';
+  let page = null, group = null, p = null;
+  S.sents.forEach((s, i) => {
+    if (s.p !== page){ page = s.p; const d = document.createElement('div'); d.className = 'pg'; d.textContent = 'Page ' + page; box.appendChild(d); group = null; }
+    if (s.g !== group){ group = s.g; p = document.createElement('p'); if (s.k) p.className = 'aside ' + s.k; box.appendChild(p); }
+    const sp = document.createElement('span'); sp.className = 's'; sp.dataset.i = i; sp.textContent = s.t;
+    p.appendChild(sp); p.appendChild(document.createTextNode(' '));
+  });
+  renderChat(); paintAll(); highlight(S.pos, true);
+  requestAnimationFrame(layoutNotes);
+}
+const el = i => document.querySelector(`.s[data-i="${i}"]`);
+function highlight(i, force){
+  document.querySelector('.s.now')?.classList.remove('now');
+  el(i)?.classList.add('now');
+  const e = S.view === 'page' ? drawNow(i) : el(i); if (!e) return;
+  const last = S.sents[S.sents.length-1].p;
+  $('#where').textContent = `Page ${S.sents[i].p} of ${last}, ${Math.round(i / S.sents.length * 100)}% read`;
+  if (force || Date.now() - lastUserScroll > 5000){
+    const r = e.getBoundingClientRect(), R = $('#reader').getBoundingClientRect();
+    if (force || r.top < R.top + R.height*.2 || r.bottom > R.top + R.height*.7) e.scrollIntoView({block:'center', behavior: force ? 'auto' : 'smooth'});
+  }
+}
+const excerpt = (i, n=90) => { const t = S.sents[i]?.t || ''; return t.length > n ? t.slice(0, n) + '…' : t; };
+
+/* ---------------- voice output (Kokoro via server) ---------------- */
+const ttsCache = new Map();
+const SESSION = Math.random().toString(36).slice(2);
+function speakable(t){
+  if (skipSet.has('cites')) t = t.replace(/\s*\[[\d,\s–\-]+\]/g, '').replace(/\s*\((?:[A-Z][^()]*?(?:et al\.)?,?\s*\d{4}[a-z]?;?\s*)+\)/g, '');
+  return t.replace(/[*#_`]+/g, '').trim();
+}
+function tts(text, prio = 1){
+  // prio 0 = needed right now, 1 = preparing upcoming sentences.
+  // Each request carries the current `token`; after a jump the server drops older ones.
+  const voice = $('#voice').value, speed = +$('#speed').value, key = voice + '|' + speed + '|' + text;
+  const have = ttsCache.get(key);
+  if (have && (have.done || have.gen === token)) return have.p;
+  const entry = {gen: token, done: false};
+  const ctl = new AbortController(), limit = setTimeout(() => ctl.abort(), 12000);   // a request stuck on a weak connection gives up after 12 s
+  entry.p = api('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, signal: ctl.signal,
+      body: JSON.stringify({text, voice, speed, session: SESSION, gen: token, prio})}).finally(() => clearTimeout(limit))
+    .then(r => r.blob()).then(b => { entry.done = true; return URL.createObjectURL(b); });
+  entry.p.catch(() => { if (ttsCache.get(key) === entry) ttsCache.delete(key); });
+  ttsCache.set(key, entry);
+  if (ttsCache.size > 60){ const [k, v] = ttsCache.entries().next().value; ttsCache.delete(k); v.p.then(URL.revokeObjectURL).catch(()=>{}); }
+  return entry.p;
+}
+function playUrl(url, my){
+  return new Promise(res => {
+    if (my !== token) return res(false);
+    player.onended = () => res(true); player.onerror = () => res(true);
+    player.src = url; player.play().catch(() => res(true));
+  });
+}
+function stopAudio(){ token++; player.pause(); player.onended = null; }
+
+/* ---------------- reading ---------------- */
+// Long sentences are spoken in short pieces so the first sound comes quickly
+function pieces(t){
+  if (t.length <= 90) return [t];
+  const out = []; let cur = '';
+  for (const part of t.split(/(?<=[,;:)])\s+/)){
+    if (cur && (cur + ' ' + part).length > 90){ out.push(cur); cur = part; } else cur = cur ? cur + ' ' + part : part;
+  }
+  if (cur) out.push(cur);
+  return out.flatMap(x => {           // a piece with no commas can still be long: cut it at a space
+    if (x.length <= 130) return [x];
+    const w = x.split(' '), res = []; let c = '';
+    for (const word of w){ if (c && (c + ' ' + word).length > 90){ res.push(c); c = word; } else c = c ? c + ' ' + word : word; }
+    if (c) res.push(c); return res;
+  });
+}
+async function startReading(){
+  if (!S.sents.length) return;
+  stopRec(); aiAbort?.abort(); stopAudio();
+  const my = token; setMode('reading');
+  while (my === token && S.pos < S.sents.length){
+    const i = S.pos;
+    if (!readable(i)){ S.pos++; continue; }
+    highlight(i);
+    const text = speakable(S.sents[i].t);
+    if (!text){ S.pos++; continue; }
+    const parts = pieces(text);
+    const first = tts(parts[0], 0);                          // what you hear next, first in line
+    parts.slice(1).forEach(x => tts(x, 1).catch(()=>{}));    // then the rest of this sentence
+    for (const j of nextReadable(i, 2)){ const nx = speakable(S.sents[j].t); if (nx) tts(pieces(nx)[0], 1).catch(()=>{}); }
+    for (let p = 0; p < parts.length; p++){
+      let url;
+      try{ url = await (p === 0 ? first : tts(parts[p], 0)).catch(e => { if (my !== token) throw e; return tts(parts[p], 0); }); }
+      catch(e){ if (my === token){ setMode('idle'); sys('The voice couldn’t be generated: ' + e.message); } return; }
+      if (my !== token) return;
+      await playUrl(url, my);
+      if (my !== token) return;
+    }
+    S.pos = i + 1; saveSoon();
+  }
+  if (my === token){ setMode('idle'); if (S.pos >= S.sents.length){ S.pos = S.sents.length - 1; sys('That’s the end of the document.'); } }
+}
+function pauseReading(){ stopAudio(); setMode('idle'); saveNow(); }
+
+/* ---------------- listening (browser speech recognition) ---------------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+// One recognizer stays on for the whole call, so you can talk over the AI.
+// Phones (Safari) end the recognizer after every pause and start a new one; what you said
+// before that is kept in sessionCarry, and the pause timer only counts while the mic is really listening.
+let rec = null, silenceTimer = null, segStart = 0, resultsLen = 0, heard = '', aiSaying = '', carry = '';
+let sessionCarry = '', lastHeardAt = 0, recLiveSince = 0, lastSent = '', lastSentAt = 0, micSeen = 0;
+const inCall = () => ['listening','thinking','speaking'].includes(S.mode);
+const bargeOn = () => !$('#barge') || $('#barge').checked;
+const micPaused = () => false;
+const norm = t => t.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff ]+/g, ' ').replace(/\s+/g, ' ').trim();
+function listen(){
+  setMode('listening'); $('#live').textContent = ''; heard = ''; sessionCarry = '';
+  segStart = resultsLen;            // ignore anything heard before this moment
+  ensureRec();
+}
+function ensureRec(){
+  if (!SR || micDenied){ $('#input').focus(); return; }
+  if (rec) return;
+  rec = new SR(); rec.lang = $('#lang').value; rec.continuous = true; rec.interimResults = true;
+  segStart = 0; resultsLen = 0;
+  rec.onresult = e => {
+    resultsLen = e.results.length; micSeen = Date.now();
+    const parts = [];
+    for (let k = segStart; k < e.results.length; k++){
+      const t = e.results[k][0].transcript.trim(); if (!t) continue;
+      // a new session on the phone often starts by repeating the last words it already gave us
+      if (!parts.length && sessionCarry && norm(sessionCarry).endsWith(norm(t))) continue;
+      parts.push(t);
+    }
+    let text = parts.join(' ').replace(/\s+/g, ' ').trim();
+    const final = e.results[e.results.length - 1].isFinal;
+    if (S.mode === 'listening'){
+      if (!text) return;
+      heard = (sessionCarry ? sessionCarry + ' ' : '') + text; lastHeardAt = Date.now();
+      $('#live').textContent = heard; armSilence(final);
+    } else if (S.mode === 'speaking' || S.mode === 'thinking'){
+      if (text && bargeOn() && !isRepeat(text) && isUserSpeech(text)){
+        bargeIn(); heard = text; sessionCarry = ''; lastHeardAt = Date.now(); $('#live').textContent = text; armSilence(final);
+      } else {
+        // the AI's own voice, or your last sentence coming back again: skip finished results
+        let k = e.results.length; while (k > segStart && !e.results[k-1].isFinal) k--; segStart = Math.max(segStart, k);
+      }
+    }
+  };
+  rec.onerror = e => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture'){ micDenied = true; sys('Microphone access was blocked. Allow the microphone in the browser’s address bar, then reload. You can type meanwhile.'); }
+  };
+  rec.onend = () => {
+    rec = null;
+    if (S.mode === 'listening' && heard) sessionCarry = heard;   // keep what you've said so far
+    if (inCall() && !micDenied && !micPaused()) setTimeout(() => { if (inCall() && !micPaused()) ensureRec(); }, S.mode === 'listening' ? 60 : 250);
+  };
+  rec.onstart = () => { micSeen = Date.now(); recLiveSince = Date.now(); };
+  rec.onaudiostart = rec.onsoundstart = () => { micSeen = Date.now(); };
+  try{ rec.start(); micSeen = Date.now(); recLiveSince = Date.now(); }
+  catch(e){ rec = null; setTimeout(() => { if (inCall()) ensureRec(); }, 1000); }
+}
+// Watchdog: the recognizer sometimes stops quietly. During a call, keep it alive.
+setInterval(() => {
+  if (!inCall() || micDenied || !SR || micPaused()) return;
+  if (!rec){ ensureRec(); return; }
+  if (S.mode === 'listening' && vad && Date.now() - vad.lastVoice < 600 && Date.now() - micSeen > 4000){
+    // you're talking but the recognizer has gone quiet: restart it and keep what it already heard
+    if (heard) sessionCarry = heard;
+    const r = rec; rec = null; r.onend = null; try{ r.abort(); }catch(e){} ensureRec(); return;
+  }
+  if (S.mode === 'listening' && !heard && Date.now() - micSeen > 25000){   // nothing at all for a while: start fresh
+    const r = rec; rec = null; r.onend = null; try{ r.abort(); }catch(e){} ensureRec();
+  }
+}, 3000);
+// How long to wait after you stop talking: 2 seconds, plus 1 if you trail off on "um", "and", "嗯", "那个"...
+// Words people trail off on while still thinking: wait a little longer after these
+const TRAILING = /(\b(um+|uh+|er+|erm|hmm+|and|but|so|or|like|because|the|a|an|to|of|with|for|in|on|at|from|about|than|as|if|when|then|also|is|it's|that's|that|which|what|why|how|this|these|my|your|their|you know|i mean|i think|i guess|kind of|sort of|maybe|actually|basically)|嗯|呃|啊|那个|这个|就是|就是说|然后|因为|所以|但是|还有|我觉得|比如|如果|或者|的)\s*$/i;
+// 2 seconds; +1 after a trailing word; +0.8 when you've been talking for a while (thinking aloud)
+const waitMs = () => 2000 + (TRAILING.test(heard) ? 1000 : 0) + (words(heard).length > 25 ? 800 : 0);
+function armSilence(){
+  clearTimeout(silenceTimer);
+  const check = () => {
+    if (S.mode !== 'listening' || !heard) return;
+    const now = Date.now();
+    const quietFor = now - Math.max(lastHeardAt, recLiveSince, vad ? vad.lastVoice : 0);   // still talking = not quiet
+    const micLive = rec && now - recLiveSince > 700;   // not while the mic is reconnecting
+    const tooLong = now - Math.max(lastHeardAt, recLiveSince) > 12000;   // a noisy room shouldn't keep it waiting forever
+    if ((quietFor >= waitMs() || tooLong) && micLive){
+      const t = heard; heard = ''; sessionCarry = ''; segStart = resultsLen; $('#live').textContent = '';
+      lastSent = t; lastSentAt = Date.now(); userSaid(t);
+    } else silenceTimer = setTimeout(check, 200);
+  };
+  silenceTimer = setTimeout(check, waitMs());
+}
+const words = t => (t.toLowerCase().match(/[a-z0-9']+|[\u4e00-\u9fff]/g) || []);
+function isRepeat(text){ const n = norm(text); return !!n && Date.now() - lastSentAt < 10000 && norm(lastSent).includes(n); }
+function isUserSpeech(text){
+  const w = words(text); if (!w.length) return false;
+  if (/^(wait|stop|hold on|hang on|sorry|excuse me|actually|等一下|等等|停|打断一下|不对)/i.test(text)) return true;
+  if (w.length < (/[\u4e00-\u9fff]/.test(text) ? 3 : 2)) return false;
+  if (!aiSaying) return true;
+  const ai = new Set(words(aiSaying)); return w.filter(x => ai.has(x)).length / w.length < 0.5;
+}
+// If you keep talking before the AI has answered, your words join the question you just asked.
+const msgEl = new WeakMap();
+function bargeIn(){
+  // Talking again within 6 s of being sent (or before the AI answers) means you weren't finished:
+  // take the question back, along with any answer that had started, and let your next words complete it.
+  if (S.lastQuestion && (S.mode === 'thinking' || Date.now() - lastSentAt < 6000)){
+    carry = S.lastQuestion;
+    for (let k = S.chat.length - 1; k >= 0; k--){
+      const m = S.chat[k];
+      if (m.role === 'assistant' || m.role === 'sys'){ msgEl.get(m)?.remove(); S.chat.splice(k, 1); continue; }
+      if (m.role === 'user'){ msgEl.get(m)?.remove(); S.chat.splice(k, 1); }
+      break;
+    }
+  }
+  aiAbort?.abort(); stopAudio(); setMode('listening');
+}
+// Voice activity: watch the microphone level directly, so we know you're still talking
+// even when the recognizer goes quiet for a while.
+let vad = null;
+async function startVAD(){
+  if (vad || !navigator.mediaDevices?.getUserMedia) return;
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true}});
+    if (!inCall()){ stream.getTracks().forEach(t => t.stop()); return; }
+    const ctx = new (window.AudioContext || window.webkitAudioContext)(), an = ctx.createAnalyser();
+    an.fftSize = 1024; ctx.createMediaStreamSource(stream).connect(an);
+    const data = new Float32Array(an.fftSize);
+    vad = {ctx, stream, lastVoice: 0, noise: 0.005};
+    vad.iv = setInterval(() => {
+      an.getFloatTimeDomainData(data);
+      let sum = 0; for (const v of data) sum += v * v;
+      const rms = Math.sqrt(sum / data.length);
+      if (rms < vad.noise * 2) vad.noise = vad.noise * 0.97 + rms * 0.03;     // follow the room's background level
+      if (rms > Math.max(0.012, vad.noise * 3)) vad.lastVoice = Date.now();
+    }, 50);
+  }catch(e){ vad = null; }
+}
+function stopVAD(){ if (!vad) return; clearInterval(vad.iv); vad.stream.getTracks().forEach(t => t.stop()); vad.ctx.close().catch(() => {}); vad = null; }
+function stopRec(){ clearTimeout(silenceTimer); heard = ''; sessionCarry = ''; $('#live').textContent = ''; if (rec){ const r = rec; rec = null; r.onend = null; try{ r.abort(); }catch(e){} } }
+
+/* ---------------- the call ---------------- */
+function beep(f=660){
+  try{ const a = new (window.AudioContext||window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain();
+    o.frequency.value = f; g.gain.setValueAtTime(.08, a.currentTime); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .18);
+    o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + .2); }catch(e){}
+}
+function tick(){
+  try{ const a = new (window.AudioContext||window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine'; o.frequency.value = 880; g.gain.setValueAtTime(.04, a.currentTime); g.gain.exponentialRampToValueAtTime(.0005, a.currentTime + .09);
+    o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + .1); }catch(e){}
+}
+function startCall(anchor, focus){
+  if (!S.sents.length) return;
+  stopAudio(); saveNow();
+  S.anchor = anchor ?? S.pos;
+  S.focus = focus || null;   // {text}: the exact words you're asking about
+  startVAD();
+  Object.values(LINES).forEach(l => tts(l, 1).catch(() => {}));  // ready before you hang up
+  openTab('call');
+  if (S.focus) addMsg('focus', S.focus.text, S.anchor);
+  else sys('Call started at: “' + excerpt(S.anchor, 60) + '”');
+  beep(); listen();
+}
+const LINES = {resume: "I'll continue reading.", repeat: 'Sure, here it is again.', back: 'Going back one sentence.'};
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function endCall(resume = true, line = LINES.resume){
+  stopRec(); aiAbort?.abort(); stopAudio(); beep(440);
+  sys('Call ended'); S.anchor = null; S.focus = null; stopVAD();
+  resume ? resumeAfterCall(line) : setMode('idle');
+}
+// After hanging up: short pause, say so, another pause, then keep reading.
+// Pressing pause or jumping anywhere during this cancels it (the token changes).
+async function resumeAfterCall(line){
+  stopAudio(); const my = token; setMode('reading');
+  const next = S.sents[S.pos] && speakable(S.sents[S.pos].t);
+  if (next) tts(pieces(next)[0], 1).catch(() => {});   // get the sentence ready while we talk
+  await sleep(700); if (my !== token) return;
+  try{ const url = await tts(line, 0); if (my !== token) return; await playUrl(url, my); }catch(e){}
+  if (my !== token) return;
+  await sleep(900); if (my !== token) return;
+  startReading();
+}
+function interruptAI(){ bargeIn(); listen(); }
+function localIntent(t){
+  const s = t.toLowerCase().replace(/[，。！？,.!?]/g, ' ').replace(/\b(uh+|um+|okay|ok|so|yeah|alright|all right|please|let's|lets|let us|now|and|then|just|can you|could you|got it)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/^(continue|continue reading|move on|keep going|keep reading|go on|resume|carry on|read on|end call|hang up|that's all|thanks|thank you)$/.test(s) || /^(继续|继续读|接着读|往下读|好了继续|挂了)$/.test(s.replace(/\s/g,''))) return 'resume';
+  if (/^(repeat|repeat that|repeat the sentence|repeat the last sentence|say that again|read that again|read it again|again|one more time)$/.test(s) || /^(再读一遍|重复|再说一遍|重读)$/.test(s.replace(/\s/g,''))) return 'repeat';
+  if (/^(go back|back up|go back one|previous sentence|go back one sentence)$/.test(s) || /^(上一句|往回读|退回去)$/.test(s.replace(/\s/g,''))) return 'back';
+  return null;
+}
+function userSaid(text){
+  $('#input').value = '';
+  if (carry){ if (localIntent(text)) carry = ''; else { text = carry + ' ' + text; carry = ''; } }
+  const intent = localIntent(text);
+  addMsg('user', text, S.focus ? null : (S.anchor ?? S.pos));
+  if (intent === 'resume') return endCall(true, LINES.resume);
+  if (intent === 'repeat'){ S.pos = S.anchor ?? S.pos; return endCall(true, LINES.repeat); }
+  if (intent === 'back'){ S.pos = Math.max(0, (S.anchor ?? S.pos) - 1); return endCall(true, LINES.back); }
+  askAI(text);
+}
+async function askAI(text){
+  stopAudio(); clearTimeout(silenceTimer);
+  S.lastQuestion = text; aiSaying = '';
+  const my = token; setMode('thinking');
+  const history = S.chat.filter(m => m.role === 'user' || m.role === 'assistant').slice(-13, -1).map(m => ({role:m.role, content: m.role === 'assistant' && m.acts?.length ? m.text + '\n[What you actually did in this reply: ' + m.acts.join('; ') + ']' : m.text}));
+  const entry = {role:'assistant', text:'', a:null}; S.chat.push(entry);
+  const bubble = renderMsg(entry).querySelector('.body');
+  aiAbort = new AbortController();
+  const queue = []; let full = '', spokenUpTo = 0, done = false, playing = false;
+  const pump = async () => {
+    if (playing) return; playing = true;
+    while (queue.length && my === token){
+      let url; try{ url = await queue.shift(); }catch(e){ continue; }
+      if (my !== token) break;
+      setMode('speaking'); await playUrl(url, my);
+    }
+    playing = false;
+    if (my === token && done && !queue.length){ aiSaying = ''; listen(); }
+  };
+  const take = final => {
+    const rest = full.slice(spokenUpTo);
+    // speak everything up to the last finished sentence (end mark followed by a space)
+    const m = rest.match(/^[\s\S]*[.!?]["')\]]*\s/)
+      || rest.match(spokenUpTo === 0 ? /^[\s\S]{25,}?[,;:—]\s/ : /^[\s\S]{70,}?[,;:—]\s/);   // first words go out early
+    const cut = final ? rest.length : (m ? m[0].length : 0);
+    let chunk = rest.slice(0, cut); spokenUpTo += cut;
+    chunk = speakable(chunk);
+    if (chunk){ queue.push(tts(chunk, 0)); pump(); }
+  };
+  try{
+    const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, signal:aiAbort.signal,
+      body: JSON.stringify({doc_id:S.id, pos:S.anchor ?? S.pos, message:text, history, focus: S.focus?.text || ''})});
+    const reader = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+    while (true){
+      const {value, done:end} = await reader.read(); if (end) break;
+      buf += dec.decode(value, {stream:true});
+      let idx;
+      while ((idx = buf.indexOf('\n\n')) >= 0){
+        const line = buf.slice(0, idx).replace(/^data: /, ''); buf = buf.slice(idx + 2);
+        if (line === '[DONE]') continue;
+        const d = JSON.parse(line);
+        if (d.error){ full += (full ? '\n' : '') + d.error; bubble.textContent = full; entry.text = full; continue; }
+        if (d.action){ aiMark(d.action); continue; }
+        if (d.status){ (entry.acts ||= []).push(d.status); const st = document.createElement('div'); st.className = 'status'; st.textContent = d.status; bubble.parentElement.insertBefore(st, bubble); continue; }
+        full += d.t; aiSaying = full; bubble.textContent = full; entry.text = full; scrollChat(); take(false);
+      }
+    }
+    take(true);
+  }catch(e){
+    if (e.name === 'AbortError'){ if (!full){ S.chat.splice(S.chat.indexOf(entry), 1); bubble.parentElement.remove(); } return; }
+    full = full || 'I couldn’t reach the AI. Check that the server is running and your key is set.';
+    bubble.textContent = full; entry.text = full;
+  }
+  done = true; saveSoon();
+  if (my === token) pump();
+}
+
+/* ---------------- chat panel ---------------- */
+function addMsg(role, text, anchor){ const m = {role, text, a: anchor ?? null}; S.chat.push(m); saveSoon(); return renderMsg(m); }
+function renderMsg(m){
+  const d = document.createElement('div'); d.className = 'msg ' + m.role;
+  if (m.role === 'user' && m.a != null && S.sents[m.a]){
+    const b = document.createElement('button'); b.className = 'anchor'; b.textContent = '“' + excerpt(m.a, 70) + '”';
+    b.onclick = () => select(m.a, true); d.appendChild(b);
+  }
+  if (m.role === 'focus'){
+    const l = document.createElement('span'); l.className = 'lbl'; l.textContent = 'Asking about'; d.appendChild(l);
+    if (m.a != null && S.sents[m.a]) d.onclick = () => select(m.a, true);
+  }
+  (m.acts || []).forEach(a => { const st = document.createElement('div'); st.className = 'status'; st.textContent = a; d.appendChild(st); });
+  const body = document.createElement('div'); body.className = 'body';
+  body.textContent = m.role === 'focus' ? '“' + (m.text.length > 400 ? m.text.slice(0, 400) + '…' : m.text) + '”' : m.text;
+  d.appendChild(body);
+  $('#msgs').querySelector('.hint')?.remove(); $('#msgs').appendChild(d); msgEl.set(m, d); scrollChat(); return d;
+}
+function sys(t){ addMsg('sys', t); }
+function renderChat(){
+  $('#msgs').innerHTML = S.chat.length ? '' : '<p class="hint">Press Call any time. Just talk: ask what a sentence means, what a term is, whether they used code. Say “repeat that”, “go back”, or “move on”. Hanging up resumes reading from the sentence you stopped on.</p>';
+  S.chat.forEach(renderMsg);
+}
+function scrollChat(){ const p = $('#callPane'); p.scrollTop = p.scrollHeight; }
+
+/* ---------------- mode + buttons ---------------- */
+function setMode(m){
+  S.mode = m;
+  const inCall = ['listening','thinking','speaking'].includes(m);
+  $('#play').setAttribute('aria-label', m === 'reading' ? 'Pause' : 'Play');
+  $('#playIcon').innerHTML = m === 'reading' ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>' : '<path d="M7 5v14l12-7z"/>';
+  $('#talk').classList.toggle('end', inCall);
+  $('#talkLabel').textContent = inCall ? 'Hang up & keep reading' : 'Call';
+  const cs = $('#callState'); cs.className = inCall ? m : 'hidden';
+  $('#callText').textContent = {listening:'Listening', thinking:'Thinking', speaking:'Speaking (Space to interrupt)'}[m] || '';
+  $('#keys').classList.toggle('hidden', inCall);
+}
+function stopEverything(){ stopVAD(); stopRec(); aiAbort?.abort(); stopAudio(); setMode('idle'); }
+
+/* ---------------- page view (the original PDF pages) ---------------- */
+function setView(v){
+  if (v === 'page' && !S.geo){ alert('Page view and export need the original PDF. Open this PDF again with "Open a PDF" (your notes are kept).'); return; }
+  S.view = v; pref.set('view', v); deselect();
+  $('#text').classList.toggle('hidden', v === 'page'); $('#pages').classList.toggle('hidden', v !== 'page');
+  $('#viewBtn').textContent = v === 'page' ? 'Text view' : 'Page view';
+  if (v === 'page' && !$('#pages').children.length) buildPages();
+  if (v === 'page') drawHls();
+  highlight(S.pos, true); layoutNotes();
+}
+function buildPages(){
+  const box = $('#pages'); box.innerHTML = '';
+  S.geo.pages.forEach(([w, h], k) => {
+    const wrap = document.createElement('div'); wrap.className = 'pgwrap'; wrap.dataset.pg = k + 1; wrap.style.aspectRatio = w + ' / ' + h;
+    const img = document.createElement('img'); img.loading = 'lazy'; img.draggable = false; img.alt = 'Page ' + (k + 1); img.src = `/api/page/${S.id}/${k + 1}`;
+    const ov = document.createElement('div'); ov.className = 'ov';
+    wrap.append(img, ov); box.appendChild(wrap);
+  });
+}
+const ovOf = pg => document.querySelector(`.pgwrap[data-pg="${pg}"] .ov`);
+function wordsOfSent(i){ const r = G?.bySent[i]; const a = []; if (r) for (let k = r[0]; k < r[1]; k++) a.push(k); return a; }
+function wordsOfHl(h){
+  const a = [], W = S.geo.words;
+  for (let i = h.s1; i <= h.s2; i++) for (const k of wordsOfSent(i)){
+    const w = W[k];
+    if (i === h.s1 && w[2] <= h.o1) continue;
+    if (i === h.s2 && w[1] >= h.o2) continue;
+    a.push(k);
+  }
+  return a;
+}
+function lineBoxes(ks){
+  const out = [];
+  for (const k of ks){
+    const w = S.geo.words[k], last = out[out.length - 1];
+    if (last && last.pg === w[3] && Math.abs(last.y0 - w[5]) < 2 && w[4] - last.x1 < 20 && w[4] >= last.x0){
+      last.x1 = Math.max(last.x1, w[6]); last.y0 = Math.min(last.y0, w[5]); last.y1 = Math.max(last.y1, w[7]);
+    } else out.push({pg:w[3], x0:w[4], y0:w[5], x1:w[6], y1:w[7]});
+  }
+  return out;
+}
+function place(b, cls){
+  const ov = ovOf(b.pg); if (!ov) return null;
+  const [pw, ph] = S.geo.pages[b.pg - 1], pad = 1.2;
+  const d = document.createElement('div'); d.className = 'box ' + cls;
+  d.style.left = ((b.x0 - pad) / pw * 100) + '%'; d.style.top = ((b.y0 - pad) / ph * 100) + '%';
+  d.style.width = ((b.x1 - b.x0 + 2*pad) / pw * 100) + '%'; d.style.height = ((b.y1 - b.y0 + 2*pad) / ph * 100) + '%';
+  ov.appendChild(d); return d;
+}
+function drawNow(i){
+  document.querySelectorAll('.box.now').forEach(x => x.remove());
+  let first = null;
+  lineBoxes(wordsOfSent(i)).forEach(b => { const d = place(b, 'now'); first ||= d; });
+  return first;
+}
+function drawHls(){
+  if (S.view !== 'page') return;
+  document.querySelectorAll('.box.hlb').forEach(x => x.remove());
+  for (const h of S.hls) lineBoxes(wordsOfHl(h)).forEach(b => { const d = place(b, 'hlb c' + h.c + (h.note ? ' noted' : '')); if (d) d.dataset.h = h.id; });
+}
+// Which word is under the pointer (or close to it)
+function wordAt(x, y){
+  const wrap = document.elementFromPoint(x, y)?.closest('.pgwrap'); if (!wrap) return -1;
+  const pg = +wrap.dataset.pg, r = wrap.getBoundingClientRect(), [pw, ph] = S.geo.pages[pg - 1];
+  const px = (x - r.left) / r.width * pw, py = (y - r.top) / r.height * ph;
+  let best = -1, bd = 1e9;
+  for (const k of (G.byPage[pg] || [])){
+    const w = S.geo.words[k];
+    const dx = px < w[4] ? w[4] - px : px > w[6] ? px - w[6] : 0, dy = py < w[5] ? w[5] - py : py > w[7] ? py - w[7] : 0;
+    const d = dx + dy * 3; if (d < bd){ bd = d; best = k; }
+  }
+  return bd < 14 ? best : -1;
+}
+let drag = null;
+$('#pages').addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  drag = {start: wordAt(e.clientX, e.clientY), end: -1, x: e.clientX, y: e.clientY, moved: false, dismiss: menuOpen};
+});
+document.addEventListener('mousemove', e => {
+  if (!drag) return;
+  if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 6) drag.moved = true;
+  if (!drag.moved || drag.start < 0) return;
+  const k = wordAt(e.clientX, e.clientY); if (k < 0 || k === drag.end) return;
+  drag.end = k;
+  document.querySelectorAll('.box.selb').forEach(x => x.remove());
+  const a = Math.min(drag.start, k), b = Math.max(drag.start, k), ks = []; for (let j = a; j <= b; j++) ks.push(j);
+  lineBoxes(ks).forEach(bx => place(bx, 'selb'));
+});
+document.addEventListener('mouseup', e => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  const rect = {left: e.clientX, right: e.clientX, top: e.clientY - 10, bottom: e.clientY + 10};
+  if (d.moved && d.start >= 0 && d.end >= 0){
+    const W = S.geo.words, a = W[Math.min(d.start, d.end)], b = W[Math.max(d.start, d.end)];
+    const sel = {s1:a[0], o1:a[1], s2:b[0], o2:b[2], rect};
+    sel.text = hlText(sel.s1, sel.o1, sel.s2, sel.o2);
+    pendingSel = null; selectionMenu(sel); return;
+  }
+  document.querySelectorAll('.box.selb').forEach(x => x.remove());
+  if (d.moved) return;
+  if (d.dismiss){ deselect(); return; }
+  if (d.start < 0) return;
+  const w = S.geo.words[d.start];
+  const h = [...S.hls].reverse().find(h => (w[0] > h.s1 || (w[0] === h.s1 && w[2] > h.o1)) && (w[0] < h.s2 || (w[0] === h.s2 && w[1] < h.o2)));
+  if (h){ deselect(); highlightMenu(h, rect); return; }
+  if (S.mode === 'reading'){ deselect(); S.pos = w[0]; startReading(); } else select(w[0]);
+});
+function hlText(s1, o1, s2, o2, max = 300){
+  const parts = []; for (let i = s1; i <= s2; i++) parts.push(S.sents[i].t.slice(i === s1 ? o1 : 0, i === s2 ? o2 : undefined));
+  return parts.join(' ').slice(0, max);
+}
+
+/* ---------------- highlights and notes ---------------- */
+const newId = () => 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const byPos = (a, b) => a.s1 - b.s1 || a.o1 - b.o1;
+const COLORS = {1:'var(--h1)', 2:'var(--h2)', 3:'var(--h3)', 4:'var(--h4)'};
+let editingId = null, menuOpen = false, pendingSel = null;
+
+// Draw the highlight <mark>s inside one sentence
+function paint(i){
+  const e = el(i); if (!e) return;
+  const t = S.sents[i].t;
+  const cover = S.hls.filter(h => h.s1 <= i && i <= h.s2)
+    .map(h => ({h, a: i === h.s1 ? h.o1 : 0, b: i === h.s2 ? h.o2 : t.length})).filter(x => x.b > x.a);
+  if (!cover.length){ if (e.dataset.painted){ e.textContent = t; delete e.dataset.painted; } return; }
+  const cuts = [...new Set([0, t.length, ...cover.flatMap(x => [x.a, x.b])])].sort((a, b) => a - b);
+  e.textContent = ''; e.dataset.painted = '1';
+  for (let k = 0; k < cuts.length - 1; k++){
+    const a = cuts[k], b = cuts[k+1], piece = t.slice(a, b);
+    const top = cover.filter(x => x.a <= a && x.b >= b).pop();
+    if (top){ const m = document.createElement('mark'); m.className = 'hl c' + top.h.c + (top.h.note ? ' noted' : ''); m.dataset.h = top.h.id; m.textContent = piece; e.appendChild(m); }
+    else e.appendChild(document.createTextNode(piece));
+  }
+}
+function paintRange(a, b){ for (let i = a; i <= b; i++) paint(i); }
+function paintAll(){
+  const touched = new Set([...document.querySelectorAll('.s[data-painted]')].map(e => +e.dataset.i));
+  S.hls.forEach(h => { for (let i = h.s1; i <= h.s2; i++) touched.add(i); });
+  touched.forEach(paint); drawHls(); renderNotes();
+}
+function refresh(h){ if (h) paintRange(h.s1, h.s2); drawHls(); saveSoon(); layoutNotes(); renderNotes(); }
+
+// Turn the browser's text selection into sentence + character positions
+function offsetIn(sEl, node, off){ const r = document.createRange(); r.setStart(sEl, 0); r.setEnd(node, off); return r.toString().length; }
+function readSelection(){
+  const sel = getSelection(); if (!sel.rangeCount || sel.isCollapsed) return null;
+  const r = sel.getRangeAt(0); if (!$('#text').contains(r.commonAncestorContainer)) return null;
+  let s1 = -1, s2 = -1;
+  for (const e of document.querySelectorAll('#text .s')){
+    if (r.intersectsNode(e)){ const i = +e.dataset.i; if (s1 < 0) s1 = i; s2 = i; } else if (s1 >= 0) break;
+  }
+  if (s1 < 0) return null;
+  const e1 = el(s1), e2 = el(s2);
+  let o1 = e1.contains(r.startContainer) ? offsetIn(e1, r.startContainer, r.startOffset) : 0;
+  let o2 = e2.contains(r.endContainer) ? offsetIn(e2, r.endContainer, r.endOffset) : S.sents[s2].t.length;
+  if (o2 === 0 && s2 > s1){ s2--; o2 = S.sents[s2].t.length; }
+  if (o1 >= S.sents[s1].t.length && s1 < s2){ s1++; o1 = 0; }
+  // snap to whole words, and don't start or end on a space
+  while (o1 > 0 && /[\w'’-]/.test(S.sents[s1].t[o1-1]) && /[\w'’-]/.test(S.sents[s1].t[o1] || '')) o1--;
+  while (o2 < S.sents[s2].t.length && /[\w'’-]/.test(S.sents[s2].t[o2]) && /[\w'’-]/.test(S.sents[s2].t[o2-1] || '')) o2++;
+  while (o1 < S.sents[s1].t.length && /\s/.test(S.sents[s1].t[o1])) o1++;
+  while (o2 > 0 && /\s/.test(S.sents[s2].t[o2-1])) o2--;
+  if (s1 === s2 && o2 <= o1) return null;
+  return {s1, o1, s2, o2, text: hlText(s1, o1, s2, o2), rect: r.getBoundingClientRect()};
+}
+
+// Floating menu
+function showMenu(rect, html, onClick){
+  const t = $('#tools'); t.innerHTML = html; t.classList.add('on'); menuOpen = true;
+  t.onclick = e => { const b = e.target.closest('button'); if (b){ e.stopPropagation(); onClick(b.dataset.act, b.dataset.c); } };
+  const top = rect.bottom + 8 + t.offsetHeight > innerHeight - 90 ? rect.top - t.offsetHeight - 8 : rect.bottom + 8;
+  t.style.top = Math.max(8, top) + 'px';
+  t.style.left = Math.max(8, Math.min(innerWidth - t.offsetWidth - 8, rect.left)) + 'px';
+}
+function deselect(){
+  document.querySelector('.s.sel')?.classList.remove('sel');
+  $('#tools').classList.remove('on'); menuOpen = false; pendingSel = null;
+  document.querySelectorAll('.box.selb').forEach(x => x.remove());
+}
+const swatches = cur => [1,2,3,4].map(c => `<button class="sw${cur == c ? ' on' : ''}" data-act="color" data-c="${c}" style="background:${COLORS[c]}" aria-label="Highlight color ${c}"></button>`).join('');
+
+// 1) Dragged across text: highlight it
+function selectionMenu(sel){
+  pendingSel = sel;
+  showMenu(sel.rect, swatches(0) + '<span class="sep"></span><button data-act="note">Highlight + note</button><button data-act="ask">Ask about this</button>', (act, c) => {
+    if (act === 'ask'){
+      const focus = {text: hlText(sel.s1, sel.o1, sel.s2, sel.o2, 3000)};
+      getSelection().removeAllRanges(); deselect(); startCall(sel.s1, focus); return;
+    }
+    const h = {id:newId(), s1:sel.s1, o1:sel.o1, s2:sel.s2, o2:sel.o2, c: +c || 1, note:'', text:sel.text};
+    S.hls.push(h); S.hls.sort(byPos);
+    getSelection().removeAllRanges(); deselect();
+    refresh(h);
+    if (act === 'note') openEditor(h.id);
+  });
+}
+// 2) Clicked an existing highlight
+function highlightMenu(h, rect){
+  showMenu(rect, swatches(h.c) + '<span class="sep"></span>' +
+    `<button data-act="note">${h.note ? 'Edit note' : 'Add note'}</button><button data-act="read">Read from here</button><button data-act="ask">Ask about this</button><button data-act="del">Delete</button>`,
+    (act, c) => {
+      deselect();
+      if (act === 'color'){ h.c = +c; refresh(h); }
+      if (act === 'note') openEditor(h.id);
+      if (act === 'read') readFrom(h.s1);
+      if (act === 'ask') startCall(h.s1, {text: hlText(h.s1, h.o1, h.s2, h.o2, 3000)});
+      if (act === 'del'){ S.hls = S.hls.filter(x => x !== h); if (editingId === h.id) editingId = null; refresh(h); }
+    });
+}
+// 3) Clicked a sentence (not while reading)
+function select(i, scroll){
+  deselect();
+  S.sel = i;
+  let e;
+  if (S.view === 'page'){ lineBoxes(wordsOfSent(i)).forEach(b => { const d = place(b, 'selb'); e ||= d; }); }
+  else { e = el(i); e?.classList.add('sel'); }
+  if (!e) return;
+  if (scroll) e.scrollIntoView({block:'center'});
+  showMenu(e.getBoundingClientRect(), '<button data-act="read">Read from here</button><button data-act="mark">Highlight sentence</button><button data-act="ask">Ask about this</button>', act => {
+    deselect();
+    if (act === 'read') readFrom(i);
+    if (act === 'mark'){ const h = {id:newId(), s1:i, o1:0, s2:i, o2:S.sents[i].t.length, c:1, note:'', text:S.sents[i].t.slice(0,300)}; S.hls.push(h); S.hls.sort(byPos); refresh(h); }
+    if (act === 'ask') startCall(i, {text: S.sents[i].t});
+  });
+}
+// The AI highlighted something or wrote a note for you during a call
+function aiMark(a){
+  let h = S.hls.find(x => x.s1 === a.s1 && x.o1 === a.o1 && x.s2 === a.s2 && x.o2 === a.o2);
+  if (h){ if (a.note) h.note = h.note ? h.note + '\n' + a.note : a.note; if (!a.note) h.c = a.c; }
+  else { h = {id:newId(), s1:a.s1, o1:a.o1, s2:a.s2, o2:a.o2, c:a.c, note:a.note || '', text:a.text}; S.hls.push(h); S.hls.sort(byPos); }
+  refresh(h); flash(h.id);
+}
+function readFrom(i){ if (S.anchor != null){ stopRec(); aiAbort?.abort(); S.anchor = null; } S.pos = i; startReading(); }
+
+// Notes: in the margin beside the text when there's room, otherwise in the Notes tab
+const marginShown = () => getComputedStyle($('#margin')).display !== 'none';
+const anchorOf = id => document.querySelector(S.view === 'page' ? `.box.hlb[data-h="${id}"]` : `mark.hl[data-h="${id}"]`);
+function openEditor(id){
+  editingId = id;
+  const m = anchorOf(id);
+  if (marginShown()){ m?.scrollIntoView({block:'center'}); layoutNotes(); }
+  else { openTab('notes'); renderNotes(); }
+  setTimeout(() => document.querySelector(`[data-edit="${id}"] textarea`)?.focus(), 30);
+}
+function flash(id){
+  const ms = document.querySelectorAll(`mark.hl[data-h="${id}"], .box.hlb[data-h="${id}"]`); const a = anchorOf(id); if (!a) return;
+  a.scrollIntoView({block:'center', behavior:'smooth'});
+  ms.forEach(m => m.classList.add('flash')); setTimeout(() => ms.forEach(m => m.classList.remove('flash')), 1200);
+}
+function noteBody(h, box){
+  // Shared by margin cards and the Notes tab
+  if (editingId === h.id){
+    box.dataset.edit = h.id;
+    const ta = document.createElement('textarea'); ta.value = h.note || ''; ta.placeholder = 'Your note…';
+    const row = document.createElement('div'); row.className = 'row';
+    const btn = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = e => { e.stopPropagation(); fn(); }; row.appendChild(b); };
+    const saveNote = () => { h.note = ta.value.trim(); editingId = null; refresh(h); };
+    btn('Save', saveNote);
+    btn('Cancel', () => { editingId = null; layoutNotes(); renderNotes(); });
+    if (h.note) btn('Delete note', () => { h.note = ''; editingId = null; refresh(h); });
+    ta.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveNote(); if (e.key === 'Escape'){ editingId = null; layoutNotes(); renderNotes(); } });
+    box.append(ta, row);
+  } else {
+    const b = document.createElement('div'); b.textContent = h.note; box.appendChild(b);
+  }
+}
+function layoutNotes(){
+  const M = $('#margin'); M.innerHTML = '';
+  if (!S.sents.length || !marginShown()) return;
+  const base = M.getBoundingClientRect().top;
+  let bottom = -Infinity;
+  for (const h of S.hls.filter(x => x.note || x.id === editingId).sort(byPos)){
+    const m = anchorOf(h.id); if (!m) continue;
+    const card = document.createElement('div'); card.className = 'mnote'; card.style.setProperty('--c', COLORS[h.c]);
+    noteBody(h, card);
+    card.onclick = () => { if (editingId !== h.id){ flash(h.id); openEditor(h.id); } };
+    card.onmouseenter = () => document.querySelectorAll(`[data-h="${h.id}"]`).forEach(x => x.classList.add('flash'));
+    card.onmouseleave = () => document.querySelectorAll(`[data-h="${h.id}"]`).forEach(x => x.classList.remove('flash'));
+    M.appendChild(card);
+    const top = Math.max(m.getBoundingClientRect().top - base, bottom + 8);
+    card.style.top = top + 'px'; bottom = top + card.offsetHeight;
+  }
+  M.style.minHeight = (bottom > 0 ? bottom + 40 : 0) + 'px';
+}
+function renderNotes(){
+  const box = $('#noteList'); box.innerHTML = '';
+  if (!S.hls.length){ box.innerHTML = '<p class="hint">Drag across any text to highlight it, then add a note if you like. Click a highlight to change its color, edit its note or delete it.</p>'; return; }
+  [...S.hls].sort(byPos).forEach(h => {
+    const d = document.createElement('div'); d.className = 'note'; d.style.setProperty('--c', COLORS[h.c]);
+    const q = document.createElement('q'); q.textContent = 'p.' + S.sents[h.s1].p + '  ' + (h.text.length > 160 ? h.text.slice(0,160) + '…' : h.text);
+    q.onclick = () => flash(h.id); d.appendChild(q);
+    if (editingId === h.id && !marginShown()) noteBody(h, d);
+    else {
+      if (h.note){ const b = document.createElement('p'); b.className = 'body'; b.textContent = h.note; d.appendChild(b); }
+      const row = document.createElement('div'); row.className = 'row';
+      const btn = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = fn; row.appendChild(b); };
+      btn(h.note ? 'Edit note' : 'Add note', () => openEditor(h.id));
+      btn('Delete highlight', () => { S.hls = S.hls.filter(x => x !== h); refresh(h); });
+      d.appendChild(row);
+    }
+    box.appendChild(d);
+  });
+}
+function openTab(tab){
+  document.querySelectorAll('.tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
+  $('#callPane').hidden = tab !== 'call'; $('#notesPane').hidden = tab !== 'notes';
+  $('#compose').classList.toggle('hidden', tab !== 'call');
+  document.querySelector('.convhead').classList.toggle('hidden', tab !== 'call');
+}
+
+/* ---------------- wiring ---------------- */
+$('#pick').onclick = () => $('#file').click();
+$('#home').onclick = () => { saveNow(); showLibrary(); };
+$('#clearChat').onclick = () => {
+  if (!S.id || !S.chat.length) return;
+  if (!confirm('Clear the whole conversation for this document? Your highlights and notes stay.')) return;
+  if (['listening','thinking','speaking'].includes(S.mode)) endCall(false);
+  S.chat = []; renderChat(); saveNow();
+};
+$('#viewBtn').onclick = () => setView(S.view === 'page' ? 'text' : 'page');
+$('#exportBtn').onclick = async () => {
+  if (!S.geo){ alert('Export needs the original PDF. Open this PDF again with "Open a PDF" (your notes are kept).'); return; }
+  clearTimeout(saveTimer); await saveNow();
+  const a = document.createElement('a'); a.href = '/api/export/' + S.id; a.download = ''; document.body.appendChild(a); a.click(); a.remove();
+};
+$('#file').onchange = e => { const f = e.target.files[0]; if (f) upload(f); e.target.value = ''; };
+const drop = $('#drop');
+['dragover','dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
+drop.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) upload(f); });
+// A click jumps / opens a menu. A drag selects text for highlighting and never jumps.
+let dismissing = false;
+$('#text').addEventListener('mousedown', () => { dismissing = menuOpen; });
+$('#text').addEventListener('mouseup', () => setTimeout(() => { const sel = readSelection(); if (sel) selectionMenu(sel); }, 0));
+$('#text').addEventListener('click', e => {
+  if (!getSelection().isCollapsed) return;                  // that was a drag-select
+  if (dismissing){ dismissing = false; deselect(); return; } // first click just closes an open menu
+  const m = e.target.closest('mark.hl');
+  if (m){ const h = S.hls.find(x => x.id === m.dataset.h); if (h){ deselect(); highlightMenu(h, m.getBoundingClientRect()); return; } }
+  const s = e.target.closest('.s'); if (!s) return;
+  const i = +s.dataset.i;
+  if (S.mode === 'reading'){ deselect(); S.pos = i; startReading(); } else select(i);
+});
+document.addEventListener('mousedown', e => { if (!e.target.closest('#tools') && !e.target.closest('#text')) deselect(); });
+addEventListener('resize', () => { layoutNotes(); });
+$('#pages').addEventListener('load', () => { clearTimeout(window.__lt); window.__lt = setTimeout(layoutNotes, 150); }, true);
+document.fonts?.ready.then(layoutNotes);
+['wheel','touchmove'].forEach(ev => $('#reader').addEventListener(ev, () => { if (menuOpen && !pendingSel) deselect(); }, {passive:true}));
+['wheel','touchmove','keydown'].forEach(ev => $('#reader').addEventListener(ev, () => lastUserScroll = Date.now(), {passive:true}));
+$('#play').onclick = () => S.mode === 'reading' ? pauseReading() : (S.anchor != null ? endCall(true) : startReading());
+const step = d => { if (!S.sents.length) return; S.pos = Math.max(0, Math.min(S.sents.length - 1, S.pos + d)); S.mode === 'reading' ? startReading() : (highlight(S.pos, true), saveSoon()); };
+$('#prev').onclick = () => step(-1);
+$('#next').onclick = () => step(1);
+$('#talk').onclick = () => ['listening','thinking','speaking'].includes(S.mode) ? endCall(true) : startCall();
+$('#send').onclick = () => { const t = $('#input').value.trim(); if (!t || !S.sents.length) return; if (S.anchor == null){ stopAudio(); S.anchor = S.pos; } userSaid(t); };
+$('#input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#send').click(); } });
+$('#input').addEventListener('focus', () => { if (S.mode === 'reading'){ stopAudio(); S.anchor = S.pos; setMode('listening'); stopRec(); } });
+['voice','speed','lang'].forEach(id => $('#' + id).onchange = () => { pref.set(id, $('#' + id).value); if (S.mode === 'reading') startReading(); if (id === 'lang' && rec){ const m = S.mode; stopRec(); if (m === 'listening') listen(); else ensureRec(); } });
+// What to leave out when reading aloud (any combination, or nothing)
+const skipSet = new Set((() => { try{ return JSON.parse(pref.get('skipset', '["caption","table","code","small"]')); }catch(e){ return []; } })());
+document.querySelectorAll('.chip[data-skip]').forEach(b => {
+  b.setAttribute('aria-pressed', skipSet.has(b.dataset.skip));
+  b.onclick = () => {
+    skipSet.has(b.dataset.skip) ? skipSet.delete(b.dataset.skip) : skipSet.add(b.dataset.skip);
+    b.setAttribute('aria-pressed', skipSet.has(b.dataset.skip)); pref.set('skipset', JSON.stringify([...skipSet]));
+  };
+});
+// Captions, tables, code and small print are shown in grey and (by default) not read aloud
+const readable = i => S.sents[i] && !(S.sents[i].k && skipSet.has(S.sents[i].k));
+function nextReadable(i, n){ const out = []; for (let j = i + 1; j < S.sents.length && out.length < n; j++) if (readable(j)) out.push(j); return out; }
+
+$('#barge').onchange = () => pref.set('barge', $('#barge').checked ? '1' : '0');
+document.querySelectorAll('.tabs [data-tab]').forEach(b => b.onclick = () => openTab(b.dataset.tab));
+document.addEventListener('keydown', e => {
+  if (e.target.closest('textarea,input,select') || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.code === 'Space'){ e.preventDefault();
+    if (S.mode === 'speaking' || S.mode === 'thinking') interruptAI();
+    else if (S.mode === 'reading') pauseReading();
+    else if (S.mode === 'idle') startReading(); }
+  if (e.key === 'Escape') deselect();
+});
+addEventListener('pagehide', saveNow);
+init();
+</script>
+</body>
+</html>

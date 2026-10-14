@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PaperTalk">
+<title>PaperTalkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E9EDE8; --page:#F8F9F6; --ink:#1E2830; --muted:#5A676E; --line:#D2D9D2;
+  --now:#F5D67E; --accent:#2B6A65; --accent-ink:#FFFFFF; --live:#C2413A; --you:#DDE7E5;
+  --ui:"Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  --read:"Literata", Georgia, serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --paper:#141A1E; --page:#1A2126; --ink:#E3E8E3; --muted:#9AA6AA; --line:#2C373D; --now:#6E5C1C; --accent:#72BCB3; --accent-ink:#0E1A19; --you:#22322F; }
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--page);color:var(--ink);font:17px/1.5 var(--ui);overflow:hidden;-webkit-tap-highlight-color:transparent;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px);--fs:1}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.screen{height:100%;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:.5rem;padding:.7rem 1rem;border-bottom:1px solid var(--line);background:var(--paper)}
+header h1{flex:1;min-width:0;margin:0;font:600 1.05rem/1.3 var(--read);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbtn{background:none;border:0;padding:.3rem .5rem;color:var(--accent);font-weight:700}
+/* library */
+#libList{flex:1;overflow:auto;padding:0 1rem env(safe-area-inset-bottom,0px)}
+#libList button{display:flex;justify-content:space-between;gap:1rem;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:1rem 0;font-family:var(--read);font-size:1.05rem}
+#libList button span:last-child{font-family:var(--ui);color:var(--muted);font-size:.9rem;white-space:nowrap}
+.empty{color:var(--muted);padding:2rem 0}
+/* reader */
+/* Reader: the text fills the whole screen; the top and bottom bars float over it, see-through */
+#readScreen{position:relative;--top:3.2rem;--bottom:11rem}
+.glass{background:color-mix(in srgb,var(--page) 55%,transparent);-webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2)}
+#readScreen header{position:absolute;top:0;left:0;right:0;z-index:5;border-bottom:0;padding-top:calc(.7rem + env(safe-area-inset-top,0px));margin-top:calc(-1 * env(safe-area-inset-top,0px))}
+.bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:color-mix(in srgb,var(--line) 70%,transparent)} .bar i{display:block;height:100%;background:var(--accent);width:0}
+#text{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:calc(var(--top) + .8rem) 1.2rem calc(var(--bottom) + 1rem);font:400 calc(1.2rem * var(--fs))/1.75 var(--read)}
+#text p{margin:0 0 1em}
+#text p.aside{font:400 .78em/1.55 var(--ui);color:var(--muted);border-left:3px solid var(--line);padding-left:.7em}
+#text p.code{font-family:ui-monospace,Menlo,monospace;font-size:.7em}
+#text .pg{font:700 .75rem/1 var(--ui);color:var(--muted);margin:1.6rem 0 .8rem;display:flex;gap:.5rem;align-items:center}
+#text .pg::after{content:"";flex:1;border-top:1px solid var(--line)}
+#text .s{border-radius:3px}
+#text .s.now{background:var(--now);box-shadow:0 0 0 3px var(--now);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+#bottom{position:absolute;left:0;right:0;bottom:0;z-index:5}
+.msg{font-size:calc(1rem * var(--fs))}
+.fs{font-weight:700;color:var(--accent);background:none;border:1px solid var(--line);border-radius:8px;padding:.1rem .45rem;font-size:.85rem}
+/* call transcript */
+#talk{position:absolute;inset:0;overflow:auto;padding:calc(var(--top) + .8rem) 1rem calc(var(--bottom) + 1rem)}
+.msg{margin:0 0 .8rem;padding:.6rem .8rem;border-radius:14px;max-width:88%;white-space:pre-wrap}
+.msg.user{background:var(--you);margin-left:auto}
+.msg.assistant{background:var(--paper);border:1px solid var(--line)}
+.msg.sys{color:var(--muted);font-size:.85rem;text-align:center;max-width:100%;padding:0}
+.msg .status{font-size:.8rem;color:var(--muted);margin-bottom:.25rem}
+#live{color:var(--muted);font-style:italic;padding:0 1rem .2rem;text-shadow:0 0 6px var(--page)}
+#live:empty{display:none}
+#toast{margin:0 1rem .4rem;padding:.55rem .8rem;border-radius:12px;background:var(--ink);color:var(--page);font-size:.9rem;text-align:center}
+/* controls */
+.controls{padding:.3rem 1rem .5rem;display:flex;flex-direction:column;gap:.5rem}
+.incall .controls .row{display:none}
+.row{display:flex;align-items:center;justify-content:center;gap:1.4rem}
+.icon{width:2.6rem;height:2.6rem;border-radius:50%;border:1px solid var(--line);background:var(--page);box-shadow:0 1px 4px rgba(0,0,0,.12);display:grid;place-items:center;padding:0}
+.icon svg{width:1.3rem;height:1.3rem}
+.play{width:3.5rem;height:3.5rem;border-radius:50%;border:0;background:var(--ink);color:var(--page);display:grid;place-items:center}
+.play svg{width:1.7rem;height:1.7rem}
+#callBtn{border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);padding:.75rem;font-weight:700;font-size:1.1rem;display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%}
+#callBtn.end{background:var(--live);color:#fff}
+#callBtn svg{width:1.3rem;height:1.3rem}
+#state{display:flex;align-items:center;justify-content:center;gap:.45rem;font-weight:700;color:var(--muted);text-shadow:0 0 6px var(--page)}
+#state:empty{display:none}
+#state.speaking,#state.thinking{cursor:pointer}
+#state .dot{width:.65rem;height:.65rem;border-radius:50%;background:currentColor}
+#state.listening{color:var(--live)} #state.listening .dot{animation:pulse 1.2s infinite}
+#state.speaking{color:var(--accent)} #state.thinking .dot{animation:blink 1s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 7px rgba(194,65,58,.25)}} @keyframes blink{50%{opacity:.25}}
+.settings{display:flex;justify-content:space-between;gap:.4rem;font-size:.78rem;color:var(--ink);
+  padding:.3rem .8rem calc(.3rem + env(safe-area-inset-bottom,0px))}
+.settings label{display:flex;align-items:center;gap:.25rem;white-space:nowrap}
+.settings select{border:1px solid var(--line);border-radius:6px;background:var(--page);padding:.1rem .15rem;font-size:.8rem;max-width:5.6rem}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="screen" id="libScreen">
+  <header><h1>PaperTalkthrough</h1><a class="hbtn" href="/?desktop=1">Desktop</a></header>
+  <div id="libList"><p class="empty">Loading your library…</p></div>
+</div>
+
+<div class="screen hidden" id="readScreen">
+  <div id="text"></div>
+  <div id="talk" class="hidden"><div id="msgs"></div></div>
+  <header class="glass" id="topbar"><button class="hbtn" id="back">‹ Library</button><h1 id="title"></h1><button class="fs" id="fsDown" aria-label="Smaller text">A−</button><button class="fs" id="fsUp" aria-label="Larger text">A+</button><button class="hbtn" id="toggleTalk">Chat</button><div class="bar"><i id="barFill"></i></div></header>
+  <div id="bottom">
+  <div id="toast" class="hidden" role="status"></div>
+  <div id="live"></div>
+  <div class="controls">
+    <div id="state"></div>
+    <div class="row">
+      <button class="icon" id="prev" aria-label="Previous sentence"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 9 12l9 6zM6 6v12"/></svg></button>
+      <button class="play" id="play" aria-label="Play"><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg></button>
+      <button class="icon" id="next" aria-label="Next sentence"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 9 6-9 6zM18 6v12"/></svg></button>
+    </div>
+    <button id="callBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><span id="callLabel">Call</span></button>
+  </div>
+  <div class="settings glass">
+    <label>I speak <select id="lang"><option value="en-US">English</option><option value="zh-CN">中文</option></select></label>
+    <label>Speed <select id="speed"><option>0.8</option><option>0.9</option><option selected>1</option><option>1.1</option><option>1.2</option><option>1.35</option></select></label>
+    <label>Voice <select id="voice"></select></label>
+  </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const pref = { get:(k,d)=>{ try{ return localStorage.getItem('ram.'+k) ?? d; }catch(e){ return d; } }, set:(k,v)=>{ try{ localStorage.setItem('ram.'+k, v); }catch(e){} } };
+const S = { id:null, title:'', sents:[], pos:0, hls:[], chat:[], mode:'idle', anchor:null, lastStarted:null };
+const SESSION = Math.random().toString(36).slice(2);
+let token = 0, aiAbort = null, saveTimer = null, wake = null;
+// Sound plays through Web Audio: on iPhone the usual audio player can get stuck after the mic has been used.
+let actx = null, currentSrc = null;
+function audioCtx(){
+  if (!actx){
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    // If the phone pauses sound in the middle of a clip (a notification, another app, the mic...),
+    // the clip freezes. Stop cleanly on this sentence instead, so ▶ picks it up again from the start.
+    actx.onstatechange = () => {
+      if (actx.state === 'running') return;
+      if (S.mode === 'reading') stopHere('Sound was interrupted. Tap ▶ to continue from this sentence.');
+      else if (S.mode === 'speaking'){ bargeIn(); listen(); toast('Sound was interrupted. Ask again if you missed the answer.'); }
+    };
+  }
+  return actx;
+}
+function wakeAudio(){ try{ const c = audioCtx(); if (c.state !== 'running') c.resume().catch(() => {}); }catch(e){} }  // call from a tap
+const decoded = new Map();
+async function decode(url){
+  if (!decoded.has(url)){
+    const buf = await fetch(url).then(r => r.arrayBuffer());
+    decoded.set(url, await new Promise((ok, bad) => audioCtx().decodeAudioData(buf, ok, bad)));
+    if (decoded.size > 40) decoded.delete(decoded.keys().next().value);
+  }
+  return decoded.get(url);
+}
+
+/* ---------- server ---------- */
+async function api(path, opts){ const r = await fetch(path, opts); if (!r.ok){ let m = r.statusText; try{ m = (await r.json()).detail || m; }catch(e){} throw new Error(m); } return r; }
+function saveSoon(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 800); }
+function saveNow(){
+  if (!S.id) return;
+  // highlights and notes are kept exactly as the desktop version left them
+  const body = JSON.stringify({pos:S.pos, hls:S.hls, chat:S.chat});
+  return fetch('/api/state/' + S.id, {method:'POST', headers:{'Content-Type':'application/json'}, body, keepalive: body.length < 60000}).catch(()=>{});
+}
+
+/* ---------- library ---------- */
+async function showLibrary(){
+  stopAll(); saveNow(); S.id = null; releaseWake();
+  $('#readScreen').classList.add('hidden'); $('#libScreen').classList.remove('hidden');
+  try{
+    const items = await (await api('/api/library')).json();
+    const box = $('#libList'); box.innerHTML = '';
+    if (!items.length){ box.innerHTML = '<p class="empty">No documents yet. Open a PDF on your computer first; it will show up here.</p>'; return; }
+    items.forEach(d => {
+      const b = document.createElement('button');
+      b.innerHTML = `<span></span><span>${Math.round(d.pos / Math.max(1, d.total) * 100)}%</span>`;
+      b.firstChild.textContent = d.title; b.onclick = () => openDoc(d.id);
+      box.appendChild(b);
+    });
+  }catch(e){ $('#libList').innerHTML = '<p class="empty">Can’t reach your computer. Make sure PaperTalkthrough is running there.</p>'; }
+}
+async function openDoc(id){
+  const {doc, state} = await (await api('/api/doc/' + id)).json();
+  Object.assign(S, {id, title:doc.title, sents:doc.sents, pos:state.pos || 0, hls:state.hls || [], chat:state.chat || [], anchor:null});
+  $('#title').textContent = S.title;
+  $('#libScreen').classList.add('hidden'); $('#readScreen').classList.remove('hidden');
+  buildText(); showTalk(false); renderChat(); setMode('idle'); fitBars(); show(S.pos, true);
+}
+
+/* ---------- display ---------- */
+function buildText(){
+  const box = $('#text'); box.innerHTML = '';
+  let page = null, group = null, p = null;
+  const multiPage = S.sents.some(s => s.p > 1);
+  S.sents.forEach((s, i) => {
+    if (multiPage && s.p !== page){ page = s.p; const d = document.createElement('div'); d.className = 'pg'; d.textContent = 'Page ' + page; box.appendChild(d); group = null; }
+    if (s.g !== group){ group = s.g; p = document.createElement('p'); if (s.k) p.className = 'aside ' + s.k; box.appendChild(p); }
+    const sp = document.createElement('span'); sp.className = 's'; sp.dataset.i = i; sp.textContent = s.t;
+    p.append(sp, ' ');
+  });
+}
+let lastTouch = 0;
+function show(i, force){
+  if (!S.sents.length) return;
+  document.querySelector('#text .s.now')?.classList.remove('now');
+  const e = document.querySelector(`#text .s[data-i="${i}"]`); if (!e) return;
+  e.classList.add('now');
+  $('#barFill').style.width = (i / Math.max(1, S.sents.length - 1) * 100) + '%';
+  // keep the sentence in view, unless you've just scrolled to look at something else
+  if (force || Date.now() - lastTouch > 5000){
+    const box = $('#text'), r = e.getBoundingClientRect(), top = $('#topbar').getBoundingClientRect().bottom, bottom = $('#bottom').getBoundingClientRect().top;
+    if (force || r.top < top + 20 || r.bottom > bottom - 20){
+      box.scrollTo({top: box.scrollTop + r.top - (top + (bottom - top) / 2 - r.height / 2), behavior: force ? 'auto' : 'smooth'});
+    }
+  }
+}
+// The text runs under the see-through bars; leave room at both ends so nothing gets stuck behind them
+function fitBars(){
+  const rs = $('#readScreen').style;
+  rs.setProperty('--top', $('#topbar').offsetHeight + 'px');
+  rs.setProperty('--bottom', $('#bottom').offsetHeight + 'px');
+}
+addEventListener('resize', fitBars);
+['touchstart','touchmove','wheel'].forEach(ev => $('#text').addEventListener(ev, () => lastTouch = Date.now(), {passive:true}));
+$('#text').addEventListener('click', e => {
+  const s = e.target.closest('.s'); if (!s || ['listening','thinking','speaking'].includes(S.mode)) return;
+  const i = +s.dataset.i;
+  if (S.mode === 'reading'){ S.pos = i; startReading(); }
+  else { S.pos = i; S.lastStarted = null; show(i); saveSoon(); }
+});
+function showTalk(on){ $('#talk').classList.toggle('hidden', !on); $('#text').classList.toggle('hidden', on); $('#toggleTalk').textContent = on ? 'Text' : 'Chat'; if (on) scrollChat(); else show(S.lastStarted ?? S.pos, true); }
+
+/* ---------- voice (made on your computer) ---------- */
+const ttsCache = new Map();
+function tts(text, prio = 1){
+  const voice = $('#voice').value || 'af_heart', speed = +$('#speed').value, key = voice + '|' + speed + '|' + text;
+  const have = ttsCache.get(key);
+  if (have && (have.done || have.gen === token)) return have.p;
+  const entry = {gen: token, done: false};
+  const ctl = new AbortController(), limit = setTimeout(() => ctl.abort(), 12000);   // a request stuck on a weak connection gives up after 12 s
+  entry.p = api('/api/tts', {method:'POST', headers:{'Content-Type':'application/json'}, signal: ctl.signal,
+      body: JSON.stringify({text, voice, speed, session: SESSION, gen: token, prio})}).finally(() => clearTimeout(limit))
+    .then(r => r.blob()).then(b => { entry.done = true; return URL.createObjectURL(b); });
+  entry.p.catch(() => { if (ttsCache.get(key) === entry) ttsCache.delete(key); });
+  ttsCache.set(key, entry);
+  if (ttsCache.size > 40){ const [k, v] = ttsCache.entries().next().value; ttsCache.delete(k); v.p.then(URL.revokeObjectURL).catch(()=>{}); }
+  return entry.p;
+}
+// Plays one clip to the end. Resolves true when it finished, false if it couldn't play (nothing is skipped).
+async function playUrl(url, my){
+  if (my !== token) return false;
+  const c = audioCtx();
+  if (c.state !== 'running'){ try{ await c.resume(); }catch(e){} }
+  if (c.state !== 'running') return false;
+  let buf; try{ buf = await decode(url); }catch(e){ return false; }
+  if (my !== token) return false;
+  return new Promise(res => {
+    const src = c.createBufferSource(); src.buffer = buf; src.connect(c.destination);
+    src.onended = () => { if (currentSrc === src) currentSrc = null; res(true); };
+    currentSrc = src; src.start();
+  });
+}
+function stopAudio(){ token++; const c = currentSrc; currentSrc = null; try{ c?.stop(); }catch(e){} }
+const speakable = t => t.replace(/[*#_`]+/g, '').trim();
+function pieces(t){
+  if (t.length <= 90) return [t];
+  const out = []; let cur = '';
+  for (const part of t.split(/(?<=[,;:)])\s+/)){ if (cur && (cur + ' ' + part).length > 90){ out.push(cur); cur = part; } else cur = cur ? cur + ' ' + part : part; }
+  if (cur) out.push(cur);
+  return out.flatMap(x => { if (x.length <= 130) return [x]; const res = []; let c = ''; for (const w of x.split(' ')){ if (c && (c + ' ' + w).length > 90){ res.push(c); c = w; } else c = c ? c + ' ' + w : w; } if (c) res.push(c); return res; });
+}
+
+/* ---------- reading ---------- */
+const skipAsides = () => true;
+// Captions, tables, code and small print are shown in grey and (by default) not read aloud
+const readable = i => S.sents[i] && !(S.sents[i].k && skipAsides());
+function nextReadable(i, n){ const out = []; for (let j = i + 1; j < S.sents.length && out.length < n; j++) if (readable(j)) out.push(j); return out; }
+
+async function startReading(){
+  if (!S.sents.length) return;
+  stopRec(); aiAbort?.abort(); stopAudio();
+  const my = token; setMode('reading'); holdWake(); showTalk(false);
+  while (my === token && S.pos < S.sents.length){
+    const i = S.pos;
+    if (!readable(i)){ S.pos++; continue; }
+    S.lastStarted = i; show(i);
+    const text = speakable(S.sents[i].t);
+    if (!text){ S.pos++; continue; }
+    const parts = pieces(text);
+    const first = tts(parts[0], 0);
+    parts.slice(1).forEach(x => tts(x, 1).catch(()=>{}));
+    // keep 4 sentences ready ahead, so a few seconds of bad signal don't interrupt reading
+    nextReadable(i, 4).forEach((j, n) => { const nx = speakable(S.sents[j].t); if (!nx) return; (n === 0 ? pieces(nx) : pieces(nx).slice(0, 1)).forEach(x => tts(x, 1).catch(()=>{})); });
+    for (let p = 0; p < parts.length; p++){
+      let url;
+      try{ url = await (p === 0 ? first : tts(parts[p], 0)).catch(e => { if (my !== token) throw e; return tts(parts[p], 0); }); }
+      catch(e){ if (my === token) stopHere('The voice didn’t arrive (weak connection?). Tap ▶ to continue from this sentence.'); return; }
+      if (my !== token) return;
+      const ok = await playUrl(url, my);
+      if (my !== token) return;
+      if (!ok){ stopHere('Sound was interrupted. Tap ▶ to continue from this sentence.'); return; }
+    }
+    S.pos = i + 1; saveSoon();
+  }
+  if (my === token){ setMode('idle'); if (S.pos >= S.sents.length) S.pos = S.sents.length - 1; }
+}
+// Stop on the current sentence (so ▶ starts it again from the beginning) and tell you why
+function stopHere(msg){ stopAudio(); S.pos = S.lastStarted ?? S.pos; setMode('idle'); toast(msg); saveNow(); }
+let toastTimer = null;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 7000); }
+function pauseReading(){ stopAudio(); setMode('idle'); saveNow(); }
+function stopAll(){ stopRec(); aiAbort?.abort(); stopAudio(); setMode('idle'); }
+
+/* ---------- keep the screen on while reading or talking ---------- */
+async function holdWake(){ try{ if ('wakeLock' in navigator && !wake) wake = await navigator.wakeLock.request('screen'); wake?.addEventListener('release', () => { wake = null; }); }catch(e){} }
+function releaseWake(){ try{ wake?.release(); }catch(e){} wake = null; }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.mode !== 'idle') holdWake(); });
+
+/* ---------- listening ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+// One recognizer stays on for the whole call, so you can talk over the AI.
+// Phones (Safari) end the recognizer after every pause and start a new one; what you said
+// before that is kept in sessionCarry, and the pause timer only counts while the mic is really listening.
+let rec = null, silenceTimer = null, segStart = 0, resultsLen = 0, heard = '', aiSaying = '', carry = '';
+let sessionCarry = '', lastHeardAt = 0, recLiveSince = 0, lastSent = '', lastSentAt = 0, micSeen = 0;
+let micDenied = false;
+const inCall = () => ['listening','thinking','speaking'].includes(S.mode);
+const bargeOn = () => !$('#barge') || $('#barge').checked;
+// On the phone the mic is switched off while the AI is talking, so its voice plays through the speaker.
+const micPaused = () => S.mode === 'speaking';
+const norm = t => t.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff ]+/g, ' ').replace(/\s+/g, ' ').trim();
+function listen(){
+  setMode('listening'); $('#live').textContent = ''; heard = ''; sessionCarry = '';
+  segStart = resultsLen;            // ignore anything heard before this moment
+  ensureRec();
+}
+function ensureRec(){
+  if (!SR || micDenied){ sys('Voice input isn’t available here. Check that you opened the secure (https) address and allowed the microphone.'); return; }
+  if (rec) return;
+  rec = new SR(); rec.lang = $('#lang').value; rec.continuous = true; rec.interimResults = true;
+  segStart = 0; resultsLen = 0;
+  rec.onresult = e => {
+    resultsLen = e.results.length; micSeen = Date.now();
+    const parts = [];
+    for (let k = segStart; k < e.results.length; k++){
+      const t = e.results[k][0].transcript.trim(); if (!t) continue;
+      // a new session on the phone often starts by repeating the last words it already gave us
+      if (!parts.length && sessionCarry && norm(sessionCarry).endsWith(norm(t))) continue;
+      parts.push(t);
+    }
+    let text = parts.join(' ').replace(/\s+/g, ' ').trim();
+    const final = e.results[e.results.length - 1].isFinal;
+    if (S.mode === 'listening'){
+      if (!text) return;
+      heard = (sessionCarry ? sessionCarry + ' ' : '') + text; lastHeardAt = Date.now();
+      $('#live').textContent = heard; armSilence(final);
+    } else if (S.mode === 'speaking' || S.mode === 'thinking'){
+      if (text && bargeOn() && !isRepeat(text) && isUserSpeech(text)){
+        bargeIn(); heard = text; sessionCarry = ''; lastHeardAt = Date.now(); $('#live').textContent = text; armSilence(final);
+      } else {
+        // the AI's own voice, or your last sentence coming back again: skip finished results
+        let k = e.results.length; while (k > segStart && !e.results[k-1].isFinal) k--; segStart = Math.max(segStart, k);
+      }
+    }
+  };
+  rec.onerror = e => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture'){ micDenied = true; sys('Microphone access was blocked. Allow it in Safari’s settings for this site, then reload.'); }
+  };
+  rec.onend = () => {
+    rec = null;
+    if (S.mode === 'listening' && heard) sessionCarry = heard;   // keep what you've said so far
+    if (inCall() && !micDenied && !micPaused()) setTimeout(() => { if (inCall() && !micPaused()) ensureRec(); }, S.mode === 'listening' ? 60 : 250);
+  };
+  rec.onstart = () => { micSeen = Date.now(); recLiveSince = Date.now(); };
+  rec.onaudiostart = rec.onsoundstart = () => { micSeen = Date.now(); };
+  try{ rec.start(); micSeen = Date.now(); recLiveSince = Date.now(); }
+  catch(e){ rec = null; setTimeout(() => { if (inCall()) ensureRec(); }, 1000); }
+}
+// Watchdog: the recognizer sometimes stops quietly. During a call, keep it alive.
+setInterval(() => {
+  if (!inCall() || micDenied || !SR || micPaused()) return;
+  if (!rec){ ensureRec(); return; }
+  if (S.mode === 'listening' && !heard && Date.now() - micSeen > 25000){   // nothing at all for a while: start fresh
+    const r = rec; rec = null; r.onend = null; try{ r.abort(); }catch(e){} ensureRec();
+  }
+}, 3000);
+// How long to wait after you stop talking: 2 seconds, plus 1 if you trail off on "um", "and", "嗯", "那个"...
+// Words people trail off on while still thinking: wait a little longer after these
+const TRAILING = /(\b(um+|uh+|er+|erm|hmm+|and|but|so|or|like|because|the|a|an|to|of|with|for|in|on|at|from|about|than|as|if|when|then|also|is|it's|that's|that|which|what|why|how|this|these|my|your|their|you know|i mean|i think|i guess|kind of|sort of|maybe|actually|basically)|嗯|呃|啊|那个|这个|就是|就是说|然后|因为|所以|但是|还有|我觉得|比如|如果|或者|的)\s*$/i;
+// 2 seconds; +1 after a trailing word; +0.8 when you've been talking for a while (thinking aloud)
+const waitMs = () => 2000 + (TRAILING.test(heard) ? 1000 : 0) + (words(heard).length > 25 ? 800 : 0);
+function armSilence(){
+  clearTimeout(silenceTimer);
+  const check = () => {
+    if (S.mode !== 'listening' || !heard) return;
+    const quietFor = Date.now() - Math.max(lastHeardAt, recLiveSince);   // a reconnect restarts the count
+    const micLive = rec && Date.now() - recLiveSince > 700;   // not while the mic is reconnecting
+    if (quietFor >= waitMs() && micLive){
+      const t = heard; heard = ''; sessionCarry = ''; segStart = resultsLen; $('#live').textContent = '';
+      lastSent = t; lastSentAt = Date.now(); userSaid(t);
+    } else silenceTimer = setTimeout(check, 200);
+  };
+  silenceTimer = setTimeout(check, waitMs());
+}
+const words = t => (t.toLowerCase().match(/[a-z0-9']+|[\u4e00-\u9fff]/g) || []);
+function isRepeat(text){ const n = norm(text); return !!n && Date.now() - lastSentAt < 10000 && norm(lastSent).includes(n); }
+function isUserSpeech(text){
+  const w = words(text); if (!w.length) return false;
+  if (/^(wait|stop|hold on|hang on|sorry|excuse me|actually|等一下|等等|停|打断一下|不对)/i.test(text)) return true;
+  if (w.length < (/[\u4e00-\u9fff]/.test(text) ? 3 : 2)) return false;
+  if (!aiSaying) return true;
+  const ai = new Set(words(aiSaying)); return w.filter(x => ai.has(x)).length / w.length < 0.5;
+}
+// If you keep talking before the AI has answered, your words join the question you just asked.
+const msgEl = new WeakMap();
+function bargeIn(){
+  // Talking again within 6 s of being sent (or before the AI answers) means you weren't finished:
+  // take the question back, along with any answer that had started, and let your next words complete it.
+  if (S.lastQuestion && (S.mode === 'thinking' || Date.now() - lastSentAt < 6000)){
+    carry = S.lastQuestion;
+    for (let k = S.chat.length - 1; k >= 0; k--){
+      const m = S.chat[k];
+      if (m.role === 'assistant' || m.role === 'sys'){ msgEl.get(m)?.remove(); S.chat.splice(k, 1); continue; }
+      if (m.role === 'user'){ msgEl.get(m)?.remove(); S.chat.splice(k, 1); }
+      break;
+    }
+  }
+  aiAbort?.abort(); stopAudio(); setMode('listening');
+}
+function stopRec(){ clearTimeout(silenceTimer); heard = ''; sessionCarry = ''; $('#live').textContent = ''; if (rec){ const r = rec; rec = null; r.onend = null; try{ r.abort(); }catch(e){} } }
+
+/* ---------- the call ---------- */
+const LINES = {resume: "I'll continue reading.", repeat: 'Sure, here it is again.', back: 'Going back one sentence.'};
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function startCall(){
+  if (!S.sents.length) return;
+  stopAudio(); saveNow(); holdWake();
+  S.anchor = S.lastStarted ?? S.pos;
+  Object.values(LINES).forEach(l => tts(l, 1).catch(() => {}));
+  showTalk(true); sys('Call started at: “' + (S.sents[S.anchor].t.slice(0, 60)) + '…”');
+  listen();
+}
+function endCall(line = LINES.resume){
+  stopRec(); aiAbort?.abort(); stopAudio(); sys('Call ended'); S.anchor = null;
+  resumeAfterCall(line);
+}
+async function resumeAfterCall(line){
+  stopAudio(); const my = token; setMode('reading'); showTalk(false); show(S.pos);
+  const next = S.sents[S.pos] && speakable(S.sents[S.pos].t); if (next) tts(pieces(next)[0], 1).catch(() => {});
+  await sleep(700); if (my !== token) return;
+  try{ const url = await tts(line, 0); if (my !== token) return; await playUrl(url, my); }catch(e){}
+  if (my !== token) return;
+  await sleep(900); if (my !== token) return;
+  startReading();
+}
+function localIntent(t){
+  const s = t.toLowerCase().replace(/[，。！？,.!?]/g, ' ').replace(/\b(uh+|um+|okay|ok|so|yeah|alright|all right|please|let's|lets|let us|now|and|then|just|can you|could you|got it)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  const zh = s.replace(/\s/g, '');
+  if (/^(continue|continue reading|move on|keep going|keep reading|go on|resume|carry on|read on|end call|hang up|that's all|thanks|thank you)$/.test(s) || /^(继续|继续读|接着读|往下读|好了继续|挂了)$/.test(zh)) return 'resume';
+  if (/^(repeat|repeat that|repeat the sentence|repeat the last sentence|say that again|read that again|read it again|again|one more time)$/.test(s) || /^(再读一遍|重复|再说一遍|重读)$/.test(zh)) return 'repeat';
+  if (/^(go back|back up|go back one|previous sentence|go back one sentence)$/.test(s) || /^(上一句|往回读|退回去)$/.test(zh)) return 'back';
+  return null;
+}
+function userSaid(text){
+  if (carry){ if (localIntent(text)) carry = ''; else { text = carry + ' ' + text; carry = ''; } }
+  const intent = localIntent(text);
+  addMsg('user', text);
+  if (intent === 'resume') return endCall(LINES.resume);
+  if (intent === 'repeat'){ S.pos = S.anchor ?? S.pos; return endCall(LINES.repeat); }
+  if (intent === 'back'){ S.pos = Math.max(0, (S.anchor ?? S.pos) - 1); return endCall(LINES.back); }
+  askAI(text);
+}
+async function askAI(text){
+  stopAudio(); clearTimeout(silenceTimer); aiSaying = ''; S.lastQuestion = text;
+  const my = token; setMode('thinking');
+  const history = S.chat.filter(m => m.role === 'user' || m.role === 'assistant').slice(-9, -1).map(m => ({role:m.role, content: m.role === 'assistant' && m.acts?.length ? m.text + '\n[What you actually did in this reply: ' + m.acts.join('; ') + ']' : m.text}));
+  const entry = {role:'assistant', text:''}; S.chat.push(entry);
+  const el = renderMsg(entry), bubble = el.querySelector('.body');
+  aiAbort = new AbortController();
+  const queue = []; let full = '', spokenUpTo = 0, done = false, playing = false;
+  const pump = async () => {
+    if (playing) return; playing = true;
+    while (queue.length && my === token){
+      let url; try{ url = await queue.shift(); }catch(e){ continue; } if (my !== token) break;
+      if (S.mode !== 'speaking'){ setMode('speaking'); stopRec(); await sleep(150); if (my !== token) break; }   // free the speaker
+      await playUrl(url, my);
+    }
+    playing = false;
+    if (my === token && done && !queue.length){ aiSaying = ''; listen(); }
+  };
+  const take = final => {
+    const rest = full.slice(spokenUpTo); const m = rest.match(/^[\s\S]*[.!?]["')\]]*\s/) || rest.match(spokenUpTo === 0 ? /^[\s\S]{25,}?[,;:—]\s/ : /^[\s\S]{70,}?[,;:—]\s/);
+    const cut = final ? rest.length : (m ? m[0].length : 0);
+    const chunk = speakable(rest.slice(0, cut)); spokenUpTo += cut;
+    if (chunk){ queue.push(tts(chunk, 0)); pump(); }
+  };
+  try{
+    const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, signal:aiAbort.signal,
+      body: JSON.stringify({doc_id:S.id, pos:S.anchor ?? S.pos, message:text, history})});
+    const reader = r.body.getReader(), dec = new TextDecoder(); let buf = '';
+    while (true){
+      const {value, done:end} = await reader.read(); if (end) break;
+      buf += dec.decode(value, {stream:true}); let idx;
+      while ((idx = buf.indexOf('\n\n')) >= 0){
+        const line = buf.slice(0, idx).replace(/^data: /, ''); buf = buf.slice(idx + 2);
+        if (line === '[DONE]') continue;
+        const d = JSON.parse(line);
+        if (d.error){ full += (full ? '\n' : '') + d.error; bubble.textContent = full; entry.text = full; continue; }
+        if (d.action){ aiMark(d.action); continue; }
+        if (d.status){ (entry.acts ||= []).push(d.status); const st = document.createElement('div'); st.className = 'status'; st.textContent = d.status; el.insertBefore(st, bubble); continue; }
+        full += d.t; aiSaying = full; bubble.textContent = full; entry.text = full; scrollChat(); take(false);
+      }
+    }
+    take(true);
+  }catch(e){
+    if (e.name === 'AbortError'){ if (!full){ S.chat.splice(S.chat.indexOf(entry), 1); el.remove(); } return; }
+    full = full || 'Couldn’t reach the AI. Check that PaperTalkthrough is running on your computer.'; bubble.textContent = full; entry.text = full;
+  }
+  done = true; saveSoon();
+  if (my === token) pump();
+}
+
+/* ---------- highlights / notes the AI adds (shown on the computer version) ---------- */
+function aiMark(a){
+  const h = S.hls.find(x => x.s1 === a.s1 && x.o1 === a.o1 && x.s2 === a.s2 && x.o2 === a.o2);
+  if (h){ if (a.note) h.note = h.note ? h.note + '\n' + a.note : a.note; if (!a.note) h.c = a.c; }
+  else { S.hls.push({id:'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), s1:a.s1, o1:a.o1, s2:a.s2, o2:a.o2, c:a.c, note:a.note || '', text:a.text}); S.hls.sort((x, y) => x.s1 - y.s1 || x.o1 - y.o1); }
+  saveSoon();
+}
+
+/* ---------- conversation ---------- */
+function addMsg(role, text){ const m = {role, text}; S.chat.push(m); saveSoon(); return renderMsg(m); }
+function renderMsg(m){
+  if (m.role === 'focus') return document.createElement('div');
+  const d = document.createElement('div'); d.className = 'msg ' + m.role;
+  (m.acts || []).forEach(a => { const st = document.createElement('div'); st.className = 'status'; st.textContent = a; d.appendChild(st); });
+  const b = document.createElement('div'); b.className = 'body'; b.textContent = m.text; d.appendChild(b);
+  $('#msgs').appendChild(d); msgEl.set(m, d); scrollChat(); return d;
+}
+const sys = t => addMsg('sys', t);
+function renderChat(){ $('#msgs').innerHTML = ''; S.chat.slice(-40).forEach(renderMsg); }
+function scrollChat(){ const p = $('#talk'); p.scrollTop = p.scrollHeight; }
+
+/* ---------- buttons ---------- */
+function setMode(m){
+  S.mode = m;
+  const inCall = ['listening','thinking','speaking'].includes(m);
+  $('#play').setAttribute('aria-label', m === 'reading' ? 'Pause' : 'Play');
+  $('#playIcon').innerHTML = m === 'reading' ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>' : '<path d="M7 5v14l12-7z"/>';
+  $('#callBtn').classList.toggle('end', inCall);
+  $('#callLabel').textContent = inCall ? 'Hang up & keep reading' : 'Call';
+  $('#state').className = inCall ? m : '';
+  $('#readScreen').classList.toggle('incall', inCall); requestAnimationFrame(fitBars);
+  $('#state').innerHTML = inCall ? `<span class="dot"></span>${{listening:'Listening', thinking:'Thinking', speaking:'Speaking — tap here to interrupt'}[m]}` : '';
+  if (m === 'idle') releaseWake();
+}
+$('#back').onclick = showLibrary;
+$('#state').onclick = () => { if (S.mode === 'speaking' || S.mode === 'thinking'){ bargeIn(); listen(); } };
+function setFs(v){ v = Math.max(0.8, Math.min(1.8, Math.round(v * 10) / 10)); document.body.style.setProperty('--fs', v); pref.set('fs', v); if (S.sents.length) show(S.lastStarted ?? S.pos, true); }
+$('#fsDown').onclick = () => setFs(+pref.get('fs', 1) - 0.1);
+$('#fsUp').onclick = () => setFs(+pref.get('fs', 1) + 0.1);
+$('#toggleTalk').onclick = () => showTalk($('#talk').classList.contains('hidden'));
+['#play','#prev','#next','#callBtn','#state','#text'].forEach(sel => $(sel).addEventListener('click', () => { wakeAudio(); $('#toast').classList.add('hidden'); }, true));
+$('#play').onclick = () => S.mode === 'reading' ? pauseReading() : (S.anchor != null ? endCall() : startReading());
+const step = d => { S.pos = Math.max(0, Math.min(S.sents.length - 1, (S.mode === 'reading' ? (S.lastStarted ?? S.pos) : S.pos) + d)); S.mode === 'reading' ? startReading() : (show(S.pos), saveSoon()); };
+$('#prev').onclick = () => step(-1);
+$('#next').onclick = () => step(1);
+$('#callBtn').onclick = () => ['listening','thinking','speaking'].includes(S.mode) ? endCall() : startCall();
+['lang','speed','voice'].forEach(id => $('#' + id).onchange = () => { pref.set(id, $('#' + id).value); if (id === 'lang' && rec){ const m = S.mode; stopRec(); if (m === 'listening') listen(); else ensureRec(); } if ((id === 'speed' || id === 'voice') && S.mode === 'reading') startReading(); });
+addEventListener('pagehide', saveNow);
+
+(async function init(){
+  $('#lang').value = pref.get('lang', 'en-US'); $('#speed').value = pref.get('speed', '1'); setFs(+pref.get('fs', 1));
+  try{
+    const c = await (await api('/api/config')).json(), want = pref.get('voice', c.voice || 'af_heart');
+    $('#voice').innerHTML = (c.voices || []).map(v => `<option ${v === want ? 'selected' : ''}>${v}</option>`).join('');
+  }catch(e){}
+  showLibrary();
+})();
+</script>
+</body>
+</html>

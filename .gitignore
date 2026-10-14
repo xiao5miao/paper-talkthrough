@@ -1,0 +1,9 @@
+# Personal settings and API key
+.env
+# Your documents, reading progress, notes and conversations
+library/
+# Voice model files (downloaded by download_models.py)
+models/
+__pycache__/
+*.pyc
+.DS_Store
