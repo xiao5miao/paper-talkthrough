@@ -10,7 +10,7 @@
 
 No more rereading the same paragraph five times.
 
-[中文使用指南 (Chinese guide)](GUIDE_zh-CN.md)
+[English guide](GUIDE_en-US.md) | [中文使用指南 (Chinese guide)](GUIDE_zh-CN.md)
 
 It runs on your own computer. The reading voice is free and works offline; only your questions go to an AI service of your choice.
 
